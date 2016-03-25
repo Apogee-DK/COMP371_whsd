@@ -40,8 +40,12 @@ glm::mat4 model_matrix;
 
 GLuint VBO, VAO, EBO;
 
+<<<<<<< HEAD
+//Test2
+=======
 //From Test1
 
+>>>>>>> refs/remotes/origin/master
 
 //Trial
 
