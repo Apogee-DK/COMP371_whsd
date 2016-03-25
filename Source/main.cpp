@@ -40,6 +40,9 @@ glm::mat4 model_matrix;
 
 GLuint VBO, VAO, EBO;
 
+//From Test1
+
+
 //Trial
 
 GLfloat point_size = 3.0f;
