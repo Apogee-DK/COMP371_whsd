@@ -40,6 +40,8 @@ glm::mat4 model_matrix;
 
 GLuint VBO, VAO, EBO;
 
+//NEW COMMENT
+
 GLfloat point_size = 3.0f;
 
 // An array of 3 vectors which represents 3 vertices
