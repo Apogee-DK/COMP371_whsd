@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <vector>
 #include <cctype>
-
+#include "SOIL.h"
 using namespace std;
 
 #define M_PI        3.14159265358979323846264338327950288   /* pi */
@@ -27,10 +27,54 @@ using namespace std;
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //PROTOTYPE FUNCTIONS AND VARIABLES
 //--------------------------------------------------------------------------------------------------------------------------------------------
+GLfloat skyboxVertices[] = {
+	// Positions          
+	-3.0f, 3.0f, -3.0f,
+	-3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+	3.0f, 3.0f, -3.0f,
+	-3.0f, 3.0f, -3.0f,
 
+	-3.0f, -3.0f, 3.0f,
+	-3.0f, -3.0f, -3.0f,
+	-3.0f, 3.0f, -3.0f,
+	-3.0f, 3.0f, -3.0f,
+	-3.0f, 3.0f, 3.0f,
+	-3.0f, -3.0f, 3.0f,
+
+	3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+
+	-3.0f, -3.0f, 3.0f,
+	-3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, -3.0f, 3.0f,
+	-3.0f, -3.0f, 3.0f,
+
+	-3.0f, 3.0f, -3.0f,
+	3.0f, 3.0f, -3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	-3.0f, 3.0f, 3.0f,
+	-3.0f, 3.0f, -3.0f,
+
+	-3.0f, -3.0f, -3.0f,
+	-3.0f, -3.0f, 3.0f,
+	3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+	-3.0f, -3.0f, 3.0f,
+	3.0f, -3.0f, 3.0f
+};
 GLFWwindow* window = 0x00;
 
 GLuint shader_program = 0;
+GLuint skyboxShader_program = 0;
 
 GLuint view_matrix_id = 0;
 GLuint model_matrix_id = 0;
@@ -42,7 +86,7 @@ glm::mat4 view_matrix;
 glm::mat4 model_matrix;
 
 GLuint VBO, VAO, EBO;
-
+GLuint skyboxVAO, skyboxVBO;
 GLfloat point_size = 3.0f;
 
 //for the points
@@ -231,7 +275,34 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 
 	return ProgramID;
 }
+//load a cubeMap (for example skybox)
+GLuint loadCubemap(vector<const GLchar*> faces)
+{
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	glActiveTexture(GL_TEXTURE0);
 
+	int width, height;
+	unsigned char* image;
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+	for (GLuint i = 0; i < faces.size(); i++)
+	{
+		image = SOIL_load_image(faces[i], &width, &height, 0, SOIL_LOAD_RGB);
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+			GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image
+			);
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+	return textureID;
+}
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATING CUBES
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -491,6 +562,16 @@ void setupVertexObjects() {
 	//UNBINDING THE VAO NOT THE EBO
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0); // Unbind VAO to prevent bugs
+	// Setup skybox VAO
+	
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+	glBindVertexArray(skyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glBindVertexArray(0);
 }
 
 
@@ -504,10 +585,17 @@ int main() {
 	initialize();
 
 	createTrees(glm::vec3(0, -1, 0), 2, 0.1);
-
+	vector<const GLchar*> faces;
+	faces.push_back("../Source/images/right.jpg");
+	faces.push_back("../Source/images/left.jpg");
+	faces.push_back("../Source/images/top.jpg");
+	faces.push_back("../Source/images/bottom.jpg");
+	faces.push_back("../Source/images/back.jpg");
+	faces.push_back("../Source/images/front.jpg");
+	GLuint cubemapTexture = loadCubemap(faces);
 	///Load the shaders
 	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
-
+	skyboxShader_program = loadShaders("../Source/skybox.vs", "../Source/skybox.fss");
 	//SETUP THE VERTEX AND ELEMENT OBJECTS FOR FIRST USE
 	setupVertexObjects();
 
@@ -524,6 +612,26 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.1f, 0.2f, 0.2f, 1.0f);
 		glPointSize(point_size);
+		// Draw skybox first
+		glDepthMask(GL_FALSE);// Remember to turn depth writing off
+		glUseProgram(skyboxShader_program);
+
+		glUniformMatrix4fv(glGetUniformLocation(view_matrix_id, "view"), 1, GL_FALSE, glm::value_ptr(view_matrix));
+		glUniformMatrix4fv(glGetUniformLocation(proj_matrix_id, "projection"), 1, GL_FALSE, glm::value_ptr(proj_matrix));
+		
+		//Pass the values of the three matrices to the shaders
+		glUniformMatrix4fv(proj_matrix_id, 1, GL_FALSE, glm::value_ptr(proj_matrix));
+		glUniformMatrix4fv(view_matrix_id, 1, GL_FALSE, glm::value_ptr(view_matrix));
+		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(model_matrix));
+		// skybox cube
+		glBindVertexArray(skyboxVAO);
+		glActiveTexture(GL_TEXTURE0);
+
+		glUniform1i(glGetUniformLocation(shader_program, "skybox"), 0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+		glDepthMask(GL_TRUE);
 
 		glUseProgram(shader_program);
 
