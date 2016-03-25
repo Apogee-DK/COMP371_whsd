@@ -29,6 +29,7 @@ block, such as destroying or relocating a cube at a desired location.
 - Light Source, Shadows: We will only be having a single light source in the virtual world, which is the sun, or the moon if there is a daytime cycle. Shadows will be present and generated accordingly.
 
 Asset Creation Method
+
 1) Create the base square with a set dimension which consists of smaller cubes
 
 2) Translate each vertex on the square to create the 3D cube
