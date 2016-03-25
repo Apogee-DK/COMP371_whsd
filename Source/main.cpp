@@ -38,12 +38,6 @@ glm::mat4 proj_matrix;
 glm::mat4 view_matrix;
 glm::mat4 model_matrix;
 
-<<<<<<< HEAD
-//REPLACE IT
-=======
-//NO TEST THIS
->>>>>>> origin/master
-
 GLuint VBO, VAO, EBO;
 
 GLfloat point_size = 3.0f;
