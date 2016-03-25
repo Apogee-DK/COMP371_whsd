@@ -38,16 +38,6 @@ glm::mat4 proj_matrix;
 glm::mat4 view_matrix;
 glm::mat4 model_matrix;
 
-//New comment
-//HELLO
-//IT'S ME
-<<<<<<< HEAD
-//I screwed this up
-=======
-//I WAS WONDERING
->>>>>>> refs/remotes/origin/master
-
->>>>>>> origin/master
 GLuint VBO, VAO, EBO;
 
 //Trial
