@@ -19,13 +19,14 @@
 #include <vector>
 #include <cctype>
 
-
-#include "Cube.h"
-
 using namespace std;
 
 #define M_PI        3.14159265358979323846264338327950288   /* pi */
 #define DEG_TO_RAD	M_PI/180.0f
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//PROTOTYPE FUNCTIONS AND VARIABLES
+//--------------------------------------------------------------------------------------------------------------------------------------------
 
 GLFWwindow* window = 0x00;
 
@@ -35,39 +36,39 @@ GLuint view_matrix_id = 0;
 GLuint model_matrix_id = 0;
 GLuint proj_matrix_id = 0;
 
-
 ///Transformations
 glm::mat4 proj_matrix;
 glm::mat4 view_matrix;
-glm::mat4 model_matrix;	
+glm::mat4 model_matrix;
 
 GLuint VBO, VAO, EBO;
 
 GLfloat point_size = 3.0f;
 
 //for the points
-static vector<GLfloat> inputPoints_1;
+vector<float> dir_translation = {
+	0.0f, 0.0f, 0.0f,
+	0.0f, 0.1f, 0.0f
+	};
 
 //for the points
-static vector<GLfloat> inputPoints_2;
+vector<GLfloat> inputPoints_2;
 
-//for the points
+//for the coordinates of objects in our scene
 static vector<GLfloat> g_vertex_buffer_data;
 
-//for the ebo
+//for the ebo, in order to draw the shap
 static vector<GLuint> indicesOfPoints;
 
+//window size
 int width, height;
 
+//Prototype function for key inputs
 void key_callback(GLFWwindow*, int, int, int, int);
 
-///Handle the keyboard input
-void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods) {
-	switch (key) {
-	default: break;
-	}
-	return;
-}
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//INITIALIZATION AND DELETION
+//--------------------------------------------------------------------------------------------------------------------------------------------
 
 bool initialize() {
 	/// Initialize GL context and O/S window using the GLFW helper library
@@ -78,7 +79,7 @@ bool initialize() {
 
 	/// Create a window of size 640x480 and with title "Lecture 2: First Triangle"
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
-	window = glfwCreateWindow(1000, 1000, "COMP371: Assignment 1", NULL, NULL);
+	window = glfwCreateWindow(1000, 1000, "COMP371: Minecraft", NULL, NULL);
 	if (!window) {
 		fprintf(stderr, "ERROR: could not open window with GLFW3\n");
 		glfwTerminate();
@@ -129,6 +130,10 @@ bool cleanUp() {
 
 	return true;
 }
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//SETUP SHADERS
+//--------------------------------------------------------------------------------------------------------------------------------------------
 
 GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_path)	{
 	// Create the shaders
@@ -227,13 +232,14 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 	return ProgramID;
 }
 
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//CREATING CUBES
+//--------------------------------------------------------------------------------------------------------------------------------------------
+
 //v1 & v2 ARE VECTORS THAT WERE TAKEN FROM THE INPUT FILES
 //bufferData IS THE VECTOR THAT HOLDS THE RESULTING TRANSLATION USING v1 & v2
 //indicesOfPoints IS THE MATRIX OF indicesOfPoints, EACH POINT HAS AN INDEX
 void translationSweepMatrix(vector<GLfloat> v1, vector<GLfloat> v2, vector<GLfloat> *bufferData, vector<GLuint> *indicesOfPoints) {
-
-	//KEEP TRACK OF THE NUMBER OF POINTS
-	int numOfVertices = v1.size() / 3;
 
 	//FOR EACH POINT IN THE SECOND VECTOR, ADD THE FIRST VECTOR TO IT --> x1, y1, y1 + x2, y2, z2 --> New point --> STORE NEW POINT IN bufferData
 	for (int i = 0; i < v2.size() / 3; i++) {
@@ -242,93 +248,215 @@ void translationSweepMatrix(vector<GLfloat> v1, vector<GLfloat> v2, vector<GLflo
 		}
 	}
 
-	for (int i = 0; i < bufferData->size(); i++) {
-		if (i%numOfVertices == numOfVertices - 1)
-			continue;
+	//Setting up each cube
+	for (int i = 0; i < bufferData->size()/3; i+=8) {
 
-		//connecting the top face and bottom face
-		if (i == 0){
-			//top face
-			indicesOfPoints->push_back(i);
-			indicesOfPoints->push_back(i + 4);
-			indicesOfPoints->push_back(i + 2);
-			
-			indicesOfPoints->push_back(i);
-			indicesOfPoints->push_back(i + 6);			
-			indicesOfPoints->push_back(i + 4);
-
-			//bottom face
-			indicesOfPoints->push_back(i + 1);
-			indicesOfPoints->push_back(i + 5);
-			indicesOfPoints->push_back(i + 3);
-
-			indicesOfPoints->push_back(i + 1);
-			indicesOfPoints->push_back(i + 7);
-			indicesOfPoints->push_back(i + 5);
-			
-		}
-
-		//PUSHING ALL THE INDEXES INTO THE VECTOR
-		//FOLLOWING THIS PATTERN
-		//
-		//0  1  2  3   4   5
-		//6  7  8  9  10  11
-		//
-		//CONNECTING 0 > 1 > 7, 0 > 6 > 7, 1 > 2 > 8, 1 > 7 > 8
+		//0 1 3
 		indicesOfPoints->push_back(i);
 		indicesOfPoints->push_back(i + 1);
-		indicesOfPoints->push_back(i + numOfVertices + 1);
+		indicesOfPoints->push_back(i + 3);
 
+		//0 3 2
 		indicesOfPoints->push_back(i);
-		indicesOfPoints->push_back(i + numOfVertices);
-		indicesOfPoints->push_back(i + numOfVertices + 1);
+		indicesOfPoints->push_back(i + 3);
+		indicesOfPoints->push_back(i + 2);
 
-		//STOP WHEN THE CONNECTION WITH THE LAST POINT IN THE VECTOR IS MADE
-		if (i + numOfVertices + 1 == bufferData->size() / 3 - 1) {
-			break;
-		}
+
+		//2 3 7
+		indicesOfPoints->push_back(i + 2);
+		indicesOfPoints->push_back(i + 3);
+		indicesOfPoints->push_back(i + 7);
+
+		//2 7 6
+		indicesOfPoints->push_back(i + 2);
+		indicesOfPoints->push_back(i + 7);
+		indicesOfPoints->push_back(i + 6);
+
+
+		//6 7 5
+		indicesOfPoints->push_back(i + 6);
+		indicesOfPoints->push_back(i + 7);
+		indicesOfPoints->push_back(i + 5);
+
+
+		//6 5 4
+		indicesOfPoints->push_back(i + 6);
+		indicesOfPoints->push_back(i + 5);
+		indicesOfPoints->push_back(i + 4);
+
+		//4 5 1
+		indicesOfPoints->push_back(i + 4);
+		indicesOfPoints->push_back(i + 5);
+		indicesOfPoints->push_back(i + 1);
+		
+		//4 1 0
+		indicesOfPoints->push_back(i + 4);
+		indicesOfPoints->push_back(i + 1);
+		indicesOfPoints->push_back(i);
+
+		//0 2 4
+		indicesOfPoints->push_back(i);
+		indicesOfPoints->push_back(i + 2);
+		indicesOfPoints->push_back(i + 4);
+
+		//4 0 2
+		indicesOfPoints->push_back(i + 4);
+		indicesOfPoints->push_back(i + 0);
+		indicesOfPoints->push_back(i + 2);
+
+		//4 2 6
+		indicesOfPoints->push_back(i + 4);
+		indicesOfPoints->push_back(i + 2);
+		indicesOfPoints->push_back(i + 6);
+
+		//4 2 6
+		indicesOfPoints->push_back(i + 4);
+		indicesOfPoints->push_back(i + 2);
+		indicesOfPoints->push_back(i + 6);
+
+		//1 5 7
+		indicesOfPoints->push_back(i + 1);
+		indicesOfPoints->push_back(i + 5);
+		indicesOfPoints->push_back(i + 7);
+
+		//1 7 3
+		indicesOfPoints->push_back(i + 1);
+		indicesOfPoints->push_back(i + 7);
+		indicesOfPoints->push_back(i + 3);		
 	}
 
 
 
 }
 
+void setTranslationDirection(float size){
+	dir_translation[4] = size;
+}
+
 //create a square
-void createSquare() {
+//The parameter x, y, z is the starting coordinate of the square
+void createCube(float x, float y, float z, float size) {
 
-	//from the assignment to create a hollow box
-	inputPoints_1.push_back(-0.5);
-	inputPoints_1.push_back(0.3);
-	inputPoints_1.push_back(0.0);
+	setTranslationDirection(size);
 
-	inputPoints_1.push_back(-0.5);
-	inputPoints_1.push_back(-0.1);
-	inputPoints_1.push_back(0.0);
+	//The shape being translated
+	inputPoints_2.push_back(x + size);
+	inputPoints_2.push_back(y);
+	inputPoints_2.push_back(z);	
+	
+	inputPoints_2.push_back(x + size);
+	inputPoints_2.push_back(y);
+	inputPoints_2.push_back(z + size);	
+	
+	inputPoints_2.push_back(x);
+	inputPoints_2.push_back(y);
+	inputPoints_2.push_back(z);
 
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.0);
+	inputPoints_2.push_back(x);
+	inputPoints_2.push_back(y);
+	inputPoints_2.push_back(z + size);
 
-	inputPoints_2.push_back(0.4);
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.0);
 
-	inputPoints_2.push_back(0.4);
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.4);
+	//--------------------------------------------------------------------------------------------------------------------------------------------
+	//ADD COLOR/TEXTURE HERE
+	//--------------------------------------------------------------------------------------------------------------------------------------------
 
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.4);
 
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.0);
-	inputPoints_2.push_back(0.0);
 
+
+
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//CREATE SCENE OBJECTS
+//--------------------------------------------------------------------------------------------------------------------------------------------
+
+//Add functions to create trees, water, grass, ...
+
+void createLeaves(glm::vec3 location, int height, float size){
+
+	glm::vec3 obj_coordinate = location;
+
+	//Stacking the cube onto of each other
+	for (int i = 0; i < height + 1; i++){
+		if (i % 2 == 0){
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], size);
+			createCube(obj_coordinate[0] + size, obj_coordinate[1], obj_coordinate[2], size);
+			createCube(obj_coordinate[0] - size, obj_coordinate[1], obj_coordinate[2], size);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] + size, size);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] - size, size); //problem with negative
+		}
+
+		else{
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], size);
+			createCube(obj_coordinate[0] + size, obj_coordinate[1], obj_coordinate[2] + size, size);
+			createCube(obj_coordinate[0] + size, obj_coordinate[1], obj_coordinate[2] - size, size);
+			createCube(obj_coordinate[0] - size, obj_coordinate[1], obj_coordinate[2] + size, size);
+			createCube(obj_coordinate[0] - size, obj_coordinate[1], obj_coordinate[2] - size, size);
+		}
+
+		//Stack leaves ontop of each other
+		obj_coordinate[1] += size;
+	}
+}
+
+void createTrees(glm::vec3 location, int height, float size){
+
+	glm::vec3 obj_coordinate = location;
+
+	//Stacking the cube onto of each other
+	for (int i = 0; i < height; i++){
+		createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], size);
+
+		//Stack cube ontop of each other
+		obj_coordinate[1] += size;
+	}
+
+	//Create the leaves
+	createLeaves(obj_coordinate, height, size);
 
 	//CALL THE TRANSLATIONAL SWEEP
-	translationSweepMatrix(inputPoints_1, inputPoints_2, &g_vertex_buffer_data, &indicesOfPoints);
+	translationSweepMatrix(dir_translation, inputPoints_2, &g_vertex_buffer_data, &indicesOfPoints);
 }
+
+void createWater(){
+
+	
+
+
+}
+
+void createGrass(){
+
+
+
+}
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//CREATE MAP
+//--------------------------------------------------------------------------------------------------------------------------------------------
+
+
+//Add function to generate the map procedurally
+void createMap(int numOfTrees, int sizeOfWater, int sizeOfMap, float sizeOfCubes){
+	
+	//coordinate and height will be random
+	//coordinate, height, size of cubes
+	createTrees(glm::vec3(0, -1, 0), 2, sizeOfCubes);
+
+
+	createWater();
+
+
+	createGrass();
+}
+
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//SETUP VERTEX OBJECTS
+//--------------------------------------------------------------------------------------------------------------------------------------------
 
 //METHOD TO GENERATE AND BIND ALL THE VERTEX AND ELEMENT OBJECTS
 void setupVertexObjects() {
@@ -365,11 +493,17 @@ void setupVertexObjects() {
 	glBindVertexArray(0); // Unbind VAO to prevent bugs
 }
 
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//MAIN FUNCTION
+//--------------------------------------------------------------------------------------------------------------------------------------------
+
 int main() {
 
 	initialize();
 
-	createSquare();
+	createTrees(glm::vec3(0, -1, 0), 2, 0.1);
 
 	///Load the shaders
 	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
@@ -413,6 +547,11 @@ int main() {
 	cleanUp();
 	return 0;
 }
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
+//KEYBOARD INPUTS
+//--------------------------------------------------------------------------------------------------------------------------------------------
 
 //HANDLES THE KEY INPUTS
 void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mods) {
