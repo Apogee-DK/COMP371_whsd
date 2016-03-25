@@ -33,17 +33,12 @@ Asset Creation Method
 - Create the base square with a set dimension which consists of smaller cubes
 - Translate each vertex on the square to create the 3D cube
 - Create different objects as classes with some parameters to set the size using the cubes we have created previously
-
-createTreeObject(..., ..., ...)
-
-createGrassObject(..., ..., ...)
+            createTreeObject(..., ..., ...)
+            createGrassObject(..., ..., ...)
 
 - Each cube will be able to hold a certain texture/model for grass/leaves, the cubes could be green for now for trees, the branches are brown, and we could use the leaves specified above
-- Use the objects to recreate the terrain procedurally to hold all our objects
-
-createMap(...., …., ….)
-
-createForest(..., ..., …,)
+- Use the objects to recreate the terrain procedurally to hold all our objects 
+            createMap(...., …., ….)createForest(..., ..., …,)
 
 Expected Challenges
 - Finding textures and models if we do not want all objects to only have a solid color 
