@@ -38,9 +38,7 @@ glm::mat4 proj_matrix;
 glm::mat4 view_matrix;
 glm::mat4 model_matrix;
 
-<<<<<<< HEAD
-=======
-//REPLACE THIS
+//New comment
 
 >>>>>>> origin/master
 GLuint VBO, VAO, EBO;
