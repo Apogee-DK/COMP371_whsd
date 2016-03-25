@@ -41,6 +41,7 @@ glm::mat4 model_matrix;
 //New comment
 //HELLO
 //IT'S ME
+//I screwed this up
 
 >>>>>>> origin/master
 GLuint VBO, VAO, EBO;
