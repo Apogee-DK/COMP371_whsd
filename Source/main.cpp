@@ -38,6 +38,7 @@ glm::mat4 proj_matrix;
 glm::mat4 view_matrix;
 glm::mat4 model_matrix;
 
+//TEST THIS
 
 GLuint VBO, VAO, EBO;
 
