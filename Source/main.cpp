@@ -73,12 +73,18 @@ GLfloat skyboxVertices[] = {
 };
 GLFWwindow* window = 0x00;
 
+//window size
+int width, height;
+
 GLuint shader_program = 0;
 GLuint skyboxShader_program = 0;
 GLuint textureShader_program = 0;
 GLuint view_matrix_id = 0;
 GLuint model_matrix_id = 0;
 GLuint proj_matrix_id = 0;
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 ///Transformations
 glm::mat4 proj_matrix;
@@ -88,7 +94,11 @@ glm::mat4 model_matrix;
 GLuint VBO, VAO, EBO;
 GLuint skyboxVAO, skyboxVBO;
 GLfloat point_size = 3.0f;
-
+bool firstMouse = true;
+GLfloat yaw = -90.0f;	// Yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right (due to how Eular angles work) so we initially rotate a bit to the left.
+GLfloat pitch = 0.0f;
+GLfloat lastX = width / 2.0;
+GLfloat lastY = height / 2.0;
 //for the points
 vector<float> dir_translation = {
 	0.0f, 0.0f, 0.0f,
@@ -104,11 +114,10 @@ static vector<GLfloat> g_vertex_buffer_data;
 //for the ebo, in order to draw the shap
 static vector<GLuint> indicesOfPoints;
 
-//window size
-int width, height;
 
 //Prototype function for key inputs
 void key_callback(GLFWwindow*, int, int, int, int);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //INITIALIZATION AND DELETION
@@ -134,6 +143,8 @@ bool initialize() {
 	glfwGetWindowSize(window, &width, &height);
 	///Register the keyboard callback function: keyPressed(...)
 	glfwSetKeyCallback(window, key_callback);
+	//Register the mouse callback function
+	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwMakeContextCurrent(window);
 
 	/// Initialize GLEW extension handler
@@ -154,9 +165,9 @@ bool initialize() {
 	proj_matrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.0f); //0.1 units <-> 100 units, clipping
 	//SETTING THE VIEW MATRIX
 	view_matrix = glm::lookAt(
-		glm::vec3(0.0f, 0.0f, 3.0f),		//Position of the camera
-		glm::vec3(0.0f, 0.0f, 0.0f),		//Target of the camera
-		glm::vec3(0.0f, 1.0f, 0.0f)		//Direction of the camera
+		cameraPos,		//Position of the camera
+		cameraFront,		//Target of the camera
+		cameraUp 		//Direction of the camera
 		);
 
 	return true;
@@ -602,7 +613,14 @@ int main() {
 	setupVertexObjects();
 
 	while (!glfwWindowShouldClose(window)) {
-
+		cameraFront[2] = cameraPos[2] - 4;
+		if (cameraFront[2] > -1) cameraFront[2] = -1;
+		cout << cameraFront[2] << endl;
+		view_matrix = glm::lookAt(
+			cameraPos,		//Position of the camera
+			cameraFront,		//Target of the camera
+			cameraUp 		//Direction of the camera
+			);
 		// update other events like input handling
 		glfwPollEvents();
 
@@ -617,8 +635,8 @@ int main() {
 		// Draw skybox first
 		glDepthMask(GL_FALSE);// Remember to turn depth writing off
 		glUseProgram(skyboxShader_program);
-
-		glUniformMatrix4fv(glGetUniformLocation(skyboxShader_program, "view"), 1, GL_FALSE, glm::value_ptr(view_matrix));
+		glm::mat4 view = glm::mat4(glm::mat3(view_matrix));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(skyboxShader_program, "projection"), 1, GL_FALSE, glm::value_ptr(proj_matrix));
 		// skybox cube
 		glBindVertexArray(skyboxVAO);
@@ -660,6 +678,7 @@ int main() {
 
 //HANDLES THE KEY INPUTS
 void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mods) {
+	GLfloat cameraSpeed = 0.05f;
 	switch (key) {
 		//THE FOLLOWING CASES ROTATES THE MODEL (OBJECT) DEPENDING ON CERTAIN KEY PRESSES
 	case GLFW_KEY_LEFT:
@@ -690,17 +709,31 @@ void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mo
 		break;
 
 	case GLFW_KEY_W:
-		if (action == GLFW_PRESS) {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //REPRESENTING MY FIGURE AS LINES (I DREW THEM AS TRIANGLES FIRST)
+		if (action != GLFW_RELEASE) {
+			cameraPos += cameraSpeed* cameraFront;
 		}
 		break;
 
+	case GLFW_KEY_A:
+		if (action != GLFW_RELEASE) {
+			cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
+		break;
+	case GLFW_KEY_S:
+		if (action != GLFW_RELEASE) {
+			cameraPos -= cameraSpeed * cameraFront;
+		}
+		break;
+	case GLFW_KEY_D:
+		if (action != GLFW_RELEASE) {
+			cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
+		break;
 	case GLFW_KEY_T:
 		if (action == GLFW_PRESS) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //REPRESENTING MY FIGURE AS A SOLID
 		}
 		break;
-
 		//SPACE WILL ALLOW YOU TO SWITCH BETWEEN FILES - MAKE SURE THAT THE FILES ARE LOCATED IN THE SAME FOLDER
 	case GLFW_KEY_ESCAPE:
 		if (action == GLFW_PRESS) {
@@ -712,4 +745,37 @@ void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mo
 		break;
 	}
 	return;
+}
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	GLfloat xoffset = xpos - lastX;
+	GLfloat yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to left
+	lastX = xpos;
+	lastY = ypos;
+
+	GLfloat sensitivity = 0.05;	// Change this value to your liking
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	// Make sure that when pitch is out of bounds, screen doesn't get flipped
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	glm::vec3 front;
+	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front.y = sin(glm::radians(pitch));
+	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(front);
 }
