@@ -1,13 +1,13 @@
 #version 330 core
+layout (location = 0) in vec3 position;
+out vec3 TexCoords;
 
-uniform mat4 view_matrix, model_matrix, proj_matrix;
+uniform mat4 projection;
+uniform mat4 view;
 
-in vec3 in_Position;		//vertex position
-out vec3 out_Color;
 
-void main () {
-	mat4 CTM = proj_matrix * view_matrix * model_matrix;
-	gl_Position = CTM * vec4 (in_Position, 1.0);
-
-	out_Color = vec3 (0, 0, (gl_Position.z + 0.3)*0.2);
-}
+void main()
+{
+    gl_Position =   projection * view * vec4(position, 1.0);  
+    TexCoords = position;
+}  

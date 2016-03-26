@@ -75,7 +75,7 @@ GLFWwindow* window = 0x00;
 
 GLuint shader_program = 0;
 GLuint skyboxShader_program = 0;
-
+GLuint textureShader_program = 0;
 GLuint view_matrix_id = 0;
 GLuint model_matrix_id = 0;
 GLuint proj_matrix_id = 0;
@@ -594,8 +594,10 @@ int main() {
 	faces.push_back("../Source/images/front.jpg");
 	GLuint cubemapTexture = loadCubemap(faces);
 	///Load the shaders
-	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
+
 	skyboxShader_program = loadShaders("../Source/skybox.vs", "../Source/skybox.fss");
+	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
+	//textureShader_program = loadShaders("../Source/cubeMap.vs", "../Source/cubeMap.fss");
 	//SETUP THE VERTEX AND ELEMENT OBJECTS FOR FIRST USE
 	setupVertexObjects();
 
@@ -616,13 +618,8 @@ int main() {
 		glDepthMask(GL_FALSE);// Remember to turn depth writing off
 		glUseProgram(skyboxShader_program);
 
-		glUniformMatrix4fv(glGetUniformLocation(view_matrix_id, "view"), 1, GL_FALSE, glm::value_ptr(view_matrix));
-		glUniformMatrix4fv(glGetUniformLocation(proj_matrix_id, "projection"), 1, GL_FALSE, glm::value_ptr(proj_matrix));
-		
-		//Pass the values of the three matrices to the shaders
-		glUniformMatrix4fv(proj_matrix_id, 1, GL_FALSE, glm::value_ptr(proj_matrix));
-		glUniformMatrix4fv(view_matrix_id, 1, GL_FALSE, glm::value_ptr(view_matrix));
-		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(model_matrix));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader_program, "view"), 1, GL_FALSE, glm::value_ptr(view_matrix));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader_program, "projection"), 1, GL_FALSE, glm::value_ptr(proj_matrix));
 		// skybox cube
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);

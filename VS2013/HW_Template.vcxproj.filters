@@ -25,6 +25,8 @@
     <None Include="..\Source\skybox.vs" />
     <None Include="..\Source\minecraft.fss" />
     <None Include="..\Source\minecraft.vs" />
+    <None Include="..\Source\cubeMap.fss" />
+    <None Include="..\Source\cubeMap.vs" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Source\main.cpp">
