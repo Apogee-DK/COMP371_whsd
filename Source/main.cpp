@@ -1,6 +1,6 @@
 #include "glew.h"		// include GL Extension Wrangler
-
 #include "glfw3.h"  // include GLFW helper library
+#include "SOIL.h"
 
 #include "glm.hpp"
 #include "gtc/matrix_transform.hpp"
@@ -13,11 +13,16 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
 #include <vector>
 #include <cctype>
+
+
+#include <time.h>
+#include <map>
 
 using namespace std;
 
@@ -28,13 +33,64 @@ using namespace std;
 //PROTOTYPE FUNCTIONS AND VARIABLES
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
+GLfloat skyboxVertices[] = {
+	// Positions          
+	-3.0f, 3.0f, -3.0f,
+	-3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+	3.0f, 3.0f, -3.0f,
+	-3.0f, 3.0f, -3.0f,
+
+	-3.0f, -3.0f, 3.0f,
+	-3.0f, -3.0f, -3.0f,
+	-3.0f, 3.0f, -3.0f,
+	-3.0f, 3.0f, -3.0f,
+	-3.0f, 3.0f, 3.0f,
+	-3.0f, -3.0f, 3.0f,
+
+	3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+
+	-3.0f, -3.0f, 3.0f,
+	-3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, -3.0f, 3.0f,
+	-3.0f, -3.0f, 3.0f,
+
+	-3.0f, 3.0f, -3.0f,
+	3.0f, 3.0f, -3.0f,
+	3.0f, 3.0f, 3.0f,
+	3.0f, 3.0f, 3.0f,
+	-3.0f, 3.0f, 3.0f,
+	-3.0f, 3.0f, -3.0f,
+
+	-3.0f, -3.0f, -3.0f,
+	-3.0f, -3.0f, 3.0f,
+	3.0f, -3.0f, -3.0f,
+	3.0f, -3.0f, -3.0f,
+	-3.0f, -3.0f, 3.0f,
+	3.0f, -3.0f, 3.0f
+};
+
 GLFWwindow* window = 0x00;
 
 GLuint shader_program = 0;
+GLuint skyboxShader_program = 0;
+GLuint textureShader_program = 0;
 
 GLuint view_matrix_id = 0;
 GLuint model_matrix_id = 0;
 GLuint proj_matrix_id = 0;
+
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 ///Transformations
 glm::mat4 proj_matrix;
@@ -42,8 +98,12 @@ glm::mat4 view_matrix;
 glm::mat4 model_matrix;
 
 GLuint VBO, VAO, EBO;
-
+GLuint skyboxVAO, skyboxVBO;
 GLfloat point_size = 3.0f;
+bool firstMouse = true;
+GLfloat yaw = -90.0f;	// Yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right (due to how Eular angles work) so we initially rotate a bit to the left.
+GLfloat pitch = 0.0f;
+float lastY = 0, lastX = 0;
 
 //for the points
 vector<float> dir_translation = {
@@ -60,11 +120,17 @@ static vector<GLfloat> g_vertex_buffer_data;
 //for the ebo, in order to draw the shap
 static vector<GLuint> indicesOfPoints;
 
+//for hitboxes
+map<string, bool> map_of_coordinates;
+
 //window size
 int width, height;
 
+
+
 //Prototype function for key inputs
 void key_callback(GLFWwindow*, int, int, int, int);
+void mouse_callback(GLFWwindow*, double, double);
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //INITIALIZATION AND DELETION
@@ -90,6 +156,8 @@ bool initialize() {
 	glfwGetWindowSize(window, &width, &height);
 	///Register the keyboard callback function: keyPressed(...)
 	glfwSetKeyCallback(window, key_callback);
+	//Register the mouse cursor position
+	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwMakeContextCurrent(window);
 
 	/// Initialize GLEW extension handler
@@ -233,6 +301,39 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
+//LOAD CUBES
+//--------------------------------------------------------------------------------------------------------------------------------------------
+
+//load a cubeMap (for example skybox)
+GLuint loadCubemap(vector<const GLchar*> faces)
+{
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	glActiveTexture(GL_TEXTURE0);
+
+	int width, height;
+	unsigned char* image;
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+	for (GLuint i = 0; i < faces.size(); i++)
+	{
+		image = SOIL_load_image(faces[i], &width, &height, 0, SOIL_LOAD_RGB);
+		glTexImage2D(
+			GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+			GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image
+			);
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+	return textureID;
+}
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATING CUBES
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -337,20 +438,26 @@ void setTranslationDirection(float size){
 //The parameter x, y, z is the starting coordinate of the square
 void createCube(float x, float y, float z, float size) {
 
+	string string_coordinates = to_string(x) + " " + to_string(y) + " " + to_string(z);
+
+
+	//For each coordinate, set a boolean if it's taken
+	map_of_coordinates[string_coordinates] = true;
+
 	setTranslationDirection(size);
 
 	//The shape being translated
 	inputPoints_2.push_back(x + size);
 	inputPoints_2.push_back(y);
-	inputPoints_2.push_back(z);	
-	
+	inputPoints_2.push_back(z);		
+
 	inputPoints_2.push_back(x + size);
 	inputPoints_2.push_back(y);
 	inputPoints_2.push_back(z + size);	
 	
 	inputPoints_2.push_back(x);
 	inputPoints_2.push_back(y);
-	inputPoints_2.push_back(z);
+	inputPoints_2.push_back(z);	
 
 	inputPoints_2.push_back(x);
 	inputPoints_2.push_back(y);
@@ -362,8 +469,6 @@ void createCube(float x, float y, float z, float size) {
 	//--------------------------------------------------------------------------------------------------------------------------------------------
 
 	//Every shape will be associated with a color, add the color "coordinate" to the inputPoints
-
-
 
 
 }
@@ -443,7 +548,7 @@ void createLeaves(glm::vec3 location, int height, float size){
 	}
 }
 
-//A tree takes up a 3 x 3 square --> make sure other trees do not over lap
+//A tree takes up a 3 x 3 square --> make sure other trees do not overlap
 void createTrees(glm::vec3 location, int height, float size){
 
 	glm::vec3 obj_coordinate = location;
@@ -490,7 +595,8 @@ void createHouse(glm::vec3 location, int height, int width, int length, float si
 	glm::vec3 obj_coordinate = location;
 	//Stacking the cube onto of each other
 	//Creating the walls
-	for (int i = 0; i < height; i++){		
+	for (int i = 0; i < height; i++){
+		
 		for (int k = 0; k < length; k++){
 			createCube(obj_coordinate[0] + k*size, obj_coordinate[1], obj_coordinate[2], size);
 			createCube(obj_coordinate[0] + k*size, obj_coordinate[1], obj_coordinate[2] + (width - 1)*size, size);
@@ -516,19 +622,63 @@ void createHouse(glm::vec3 location, int height, int width, int length, float si
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATE MAP
 //--------------------------------------------------------------------------------------------------------------------------------------------
-//Add function to generate the map procedurally
-void createMap(int numOfTrees, int sizeOfWater, int sizeOfMap, float sizeOfCubes){
-	
-	//coordinate and height will be random
 
+bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_object, int length_object, float size){
+
+	string string_coordinates;
+
+	//n^3...
+	for (int h = 0; h < height_object; h++){
+		for (int w = 0; w < width_object; w++){
+			for (int l = 0; l < length_object; l++){
+
+				string_coordinates = to_string(starting_position[0] + l*size) + " " + to_string(starting_position[1] + h*size) + " " + to_string(starting_position[2] + w*size);
+
+				if (map_of_coordinates[string_coordinates] == true){
+					return true;
+				}				
+			}
+		}
+	}
+
+	return false;
+}
+
+//Add function to generate the map procedurally
+void createMap(int length_Map, int width_Map, int numOfTrees, int sizeOfWater, float sizeOfCube){
+	
+	srand(time(0));
+
+	//NEED A CHECKEMPTYSPACES(int width, int length, float size) FUNCTION TO DETERMINE IF THE OBJECT CAN BE PLACED THERE
+	//This needs to be done for each creation of an object	
+
+	//coordinate and height will be random
 	//coordinate, height, size of cubes
-	createTrees(glm::vec3(0, 0, 0), 2, sizeOfCubes);
+	for (int i = 0; i < numOfTrees; i++){
+
+		//length_map - 2, because I don't want the tree to appear off the map
+		//A tree is always  3 x 3
+		float pos_x = rand() % (length_Map - 2) + 1;
+		float pos_y = (rand() % 100) / 100;
+		float pos_z = rand() % (width_Map - 2) + 1;
+		int height = rand() % 10;
+
+
+		while (checkEmptySpaces(glm::vec3(pos_x, pos_y, pos_z), height, 3, 3, sizeOfCube)){
+			pos_x = rand() % (length_Map - 2) + 1;
+			pos_y = (rand() % 100) / 100;
+			pos_z = rand() % (width_Map - 2) + 1;
+
+		}
+
+		createTrees(glm::vec3(0, 0, 0), 2, sizeOfCube);
+	}
 
 	//The position of the water section will be randomized depending on how large the surface is
 	//The coordinates, width and length will be random
-	createWater(glm::vec3(0, -1, 0), 1000, 1000, sizeOfCubes);
+	createWater(glm::vec3(0, -1, 0), 1000, 1000, sizeOfCube);
 
-	createGrass(glm::vec3(0, -1, 0), 1000, 1000, sizeOfCubes);
+	createGrass(glm::vec3(0, -1, 0), 1000, 1000, sizeOfCube);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -568,48 +718,93 @@ void setupVertexObjects() {
 	//UNBINDING THE VAO NOT THE EBO
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0); // Unbind VAO to prevent bugs
+	// Setup skybox VAO
+
+	glGenVertexArrays(1, &skyboxVAO);
+	glGenBuffers(1, &skyboxVBO);
+	glBindVertexArray(skyboxVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glBindVertexArray(0);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //MAIN FUNCTION
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
+//SET UP THE MAP
+//Reminder: Z coordinate is always negative
+//Z can be bigger than 1
+//Y must be between -1 and 0
+//X can be bigger than 1
+//createWater(glm::vec3(0, -1.0, 0), 5, 5, 0.1);
+//createGrass(glm::vec3(0, -1.0, 0), 100, 100, 0.1);
+//createTrees(glm::vec3(0, -0.9, 0), 2, 0.1);
+//createTrees(glm::vec3(0.5, -0.9, -0.5), 3, 0.1);
+
+//createHouse(glm::vec3(1.5, -0.9, -0.5), 3, 5, 4, 0.1);
+//createRoof(glm::vec3(0, 0, 0), 3, 5, 4, 0.1);
+
 int main() {
 
 	initialize();
 
-	//SET UP THE MAP
-	//Reminder: Z coordinate is always negative
-	//Z can be bigger than 1
-	//Y must be between -1 and 0
-	//X can be bigger than 1
-	//createWater(glm::vec3(0, -1.0, 0), 5, 5, 0.1);
-	//createGrass(glm::vec3(0, -1.0, 0), 100, 100, 0.1);
-	//createTrees(glm::vec3(0, -0.9, 0), 2, 0.1);
-	//createTrees(glm::vec3(0.5, -0.9, -0.5), 3, 0.1);
-
-	//createHouse(glm::vec3(1.5, -0.9, -0.5), 3, 5, 4, 0.1);
-	//createRoof(glm::vec3(0, 0, 0), 3, 5, 4, 0.1);
-
+	createTrees(glm::vec3(0, -1, 0), 2, 0.1);
+	vector<const GLchar*> faces;
+	faces.push_back("../Source/images/right.jpg");
+	faces.push_back("../Source/images/left.jpg");
+	faces.push_back("../Source/images/top.jpg");
+	faces.push_back("../Source/images/bottom.jpg");
+	faces.push_back("../Source/images/back.jpg");
+	faces.push_back("../Source/images/front.jpg");
+	GLuint cubemapTexture = loadCubemap(faces);
 	///Load the shaders
-	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
 
+	skyboxShader_program = loadShaders("../Source/skybox.vs", "../Source/skybox.fss");
+	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
+	//textureShader_program = loadShaders("../Source/cubeMap.vs", "../Source/cubeMap.fss");
 	//SETUP THE VERTEX AND ELEMENT OBJECTS FOR FIRST USE
 	setupVertexObjects();
 
 	while (!glfwWindowShouldClose(window)) {
 
+		cameraFront[2] = cameraPos[2] - 4;
+		if (cameraFront[2] > -1) cameraFront[2] = -1;
+		view_matrix = glm::lookAt(
+			cameraPos,		//Position of the camera
+			cameraFront,		//Target of the camera
+			cameraUp 		//Direction of the camera
+			);
 		// update other events like input handling
 		glfwPollEvents();
 
 		//FOR RESIZING THE WINDOW
 		glfwGetWindowSize(window, &width, &height);
 		glViewport(0, 0, width, height);
-		
+
 		// wipe the drawing surface clear
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.1f, 0.2f, 0.2f, 1.0f);
 		glPointSize(point_size);
+
+
+		// Draw skybox first
+		glDepthMask(GL_FALSE);// Remember to turn depth writing off
+		glUseProgram(skyboxShader_program);
+		glm::mat4 view = glm::mat4(glm::mat3(view_matrix));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader_program, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxShader_program, "projection"), 1, GL_FALSE, glm::value_ptr(proj_matrix));
+		// skybox cube
+		glBindVertexArray(skyboxVAO);
+		glActiveTexture(GL_TEXTURE0);
+
+		glUniform1i(glGetUniformLocation(shader_program, "skybox"), 0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+		glDepthMask(GL_TRUE);
 
 		glUseProgram(shader_program);
 
@@ -641,26 +836,29 @@ int main() {
 
 //HANDLES THE KEY INPUTS
 void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mods) {
+
+	GLfloat cameraSpeed = 0.1f;
+
 	switch (key) {
 		//THE FOLLOWING CASES ROTATES THE MODEL (OBJECT) DEPENDING ON CERTAIN KEY PRESSES
 	case GLFW_KEY_LEFT:
 		if (action != GLFW_RELEASE) {
-			model_matrix = glm::rotate(model_matrix, 0.1f, glm::vec3(0, -0.5, 0));
+			model_matrix = glm::translate(model_matrix, glm::vec3(-0.1, 0, 0));
 		}
 		break;
 	case GLFW_KEY_RIGHT:
 		if (action != GLFW_RELEASE) {
-			model_matrix = glm::rotate(model_matrix, 0.1f, glm::vec3(0, 0.5, 0));
+			model_matrix = glm::translate(model_matrix, glm::vec3(0.1, 0, 0));
 		}
 		break;
 	case GLFW_KEY_UP:
 		if (action != GLFW_RELEASE) {
-			model_matrix = glm::rotate(model_matrix, 0.1f, glm::vec3(-0.5, 0, 0));
+			model_matrix = glm::translate(model_matrix, glm::vec3(0, 0, 0.1));
 		}
 		break;
 	case GLFW_KEY_DOWN:
 		if (action != GLFW_RELEASE) {
-			model_matrix = glm::rotate(model_matrix, 0.1f, glm::vec3(0.5, 0, 0));
+			model_matrix = glm::translate(model_matrix, glm::vec3(0, 0, -0.1));
 		}
 		break;
 
@@ -671,11 +869,26 @@ void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mo
 		break;
 
 	case GLFW_KEY_W:
-		if (action == GLFW_PRESS) {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //REPRESENTING MY FIGURE AS LINES (I DREW THEM AS TRIANGLES FIRST)
+		if (action != GLFW_RELEASE) {
+			cameraPos += cameraSpeed* cameraFront;
 		}
 		break;
 
+	case GLFW_KEY_A:
+		if (action != GLFW_RELEASE) {
+			cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
+		break;
+	case GLFW_KEY_S:
+		if (action != GLFW_RELEASE) {
+			cameraPos -= cameraSpeed * cameraFront;
+		}
+		break;
+	case GLFW_KEY_D:
+		if (action != GLFW_RELEASE) {
+			cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
+		break;
 	case GLFW_KEY_T:
 		if (action == GLFW_PRESS) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //REPRESENTING MY FIGURE AS A SOLID
@@ -694,3 +907,45 @@ void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mo
 	}
 	return;
 }
+
+//HANDLE CURSOR POSITION TO KNOW IF IT SHOULD ZOOM IN OR ZOOM OUT
+void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+	/*
+	GLfloat yoffset = lastY - ypos;
+	lastY = ypos;
+	GLfloat xoffset = lastX - xpos;
+	lastX = xpos;
+
+	
+	if (yoffset != 0)
+		view_matrix = glm::rotate(view_matrix, 0.025f, glm::vec3(-0.1f * yoffset, 0.0f, 0.0f));
+
+	if (xoffset != 0)
+		view_matrix = glm::rotate(view_matrix, 0.025f, glm::vec3(0.0f, 0.1f * xoffset, 0.0f));
+	*/
+
+	GLfloat xoffset = xpos - lastX;
+	GLfloat yoffset = lastY - ypos; // Reversed since y-coordinates go from bottom to left
+	lastX = xpos;
+	lastY = ypos;
+
+	GLfloat sensitivity = 0.1;	// Change this value to your liking
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	// Make sure that when pitch is out of bounds, screen doesn't get flipped
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+
+	glm::vec3 front;
+	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front.y = sin(glm::radians(pitch));
+	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	cameraFront = glm::normalize(front);
+}
+
