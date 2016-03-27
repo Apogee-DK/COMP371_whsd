@@ -198,8 +198,14 @@ bool initialize() {
 	glEnable(GL_DEPTH_TEST); /// Enable depth-testing
 	glDepthFunc(GL_LESS);	/// The type of testing i.e. a smaller value as "closer"
 
-	//INITIALIZING THE PROJECTION MATRIX AND THE VIEW MATRIX
-	proj_matrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.0f); //0.1 units <-> 100 units, clipping
+	//INITIALIZING THE PROJECTION MATRIX
+	proj_matrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.01f, 100.0f); //0.1 units <-> 100 units, clipping
+	//SETTING THE VIEW MATRIX
+	view_matrix = glm::lookAt(
+		glm::vec3(0.0f, 0.0f, 1.0f),		//Position of the camera
+		glm::vec3(0.0f, 0.0f, -1.0f),		//Target of the camera
+		glm::vec3(0.0f, 1.0f, 0.0f)		//Normal of the camera
+		);
 
 	return true;
 }
@@ -756,10 +762,10 @@ bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_
 					//For the first cubes being placed above the base, check if the cube below is ground, water or an empty space
 
 					//Convert the coordinate of the cube below our object
-					string_ground_or_water = to_string(starting_position[0] + l*sizeOfCube - sizeOfCube) + " " + to_string(starting_position[1] + h*sizeOfCube - sizeOfCube) + " " + to_string(starting_position[2] - w*sizeOfCube - sizeOfCube);
+					string_ground_or_water = to_string(starting_position[0] + l*sizeOfCube) + " " + to_string(starting_position[1] - sizeOfCube) + " " + to_string(starting_position[2] - w*sizeOfCube);
 
 					//-1 is water, if it is 0 then it is out of bounds (there is no ground there)
-					if (map_of_coordinates[string_ground_or_water] == -1 || map_of_coordinates[string_ground_or_water] == 0){
+					if (map_of_coordinates[string_ground_or_water] == -1){
 						return true;
 					}
 				}
@@ -791,8 +797,8 @@ void generateTreesToScene(glm::vec3 location_ground, int numOfTrees, int width_M
 
 		//length_map - 2, because we do not want the tree to appear off the map
 		//A tree is always 3 x 3
-		float pos_x = (rand() % (length_Map - 4) + 1) / (length_Map * sizeOfCube);
-		float pos_z = (rand() % (width_Map - 4) + 1) / (width_Map * sizeOfCube);
+		float pos_x = (rand() % (length_Map - 4) + 1) / 10.0f; //(length_Map * sizeOfCube);
+		float pos_z = (rand() % (width_Map - 4) + 1) / 10.0f; //(width_Map * sizeOfCube);
 
 		//A tree cannot be higher than 5
 		int height_tree = rand() % 5 + 2;
@@ -804,8 +810,8 @@ void generateTreesToScene(glm::vec3 location_ground, int numOfTrees, int width_M
 			//If the tree cannot be placed at the specified coordinate
 
 			//Random the x and z coordinate again
-			pos_x = (rand() % (length_Map - 4) + 1) / (length_Map * sizeOfCube);
-			pos_z = (rand() % (width_Map - 4) + 1) / (width_Map * sizeOfCube);
+			pos_x = (rand() % (length_Map - 4) + 1) / 10.0f; //(length_Map * sizeOfCube);
+			pos_z = (rand() % (width_Map - 4) + 1) / 10.0f; //(width_Map * sizeOfCube);
 		}
 
 		//Create the tree object if all conditions are satisfied
@@ -828,25 +834,28 @@ void generateHousesToScene(glm::vec3 location_ground, int numOfHouses, int width
 	for (int i = 0; i < numOfHouses; i++){
 
 		//Random the height, width and length of the house
-		int height_house = rand() % 5 + 2;
-		int width_house = rand() % 7 + 4;
-		int length_house = rand() % 7 + 4;
+		int height_house = rand() % 10 + 2;
+		int width_house = rand() % 10 + 5;
+		int length_house = rand() % 10 + 5;
 
 		//length_map - length_house, because I don't want the house to appear off the map
 		//A house width is always a random number
 		//A house length is always a random number
 		//_ _ _ _ _    <-- Roof
 		//  _ _ _		<-- Wall
-		float pos_x = (rand() % (length_Map - length_house) + 1) / (length_Map * sizeOfCube);
-		float pos_z = (rand() % (width_Map - width_house) + 1) / (width_Map * sizeOfCube);
+		float pos_x = (rand() % (length_Map - length_house) + 1) / 10.0f; // (length_Map * sizeOfCube);
+		float pos_z = (rand() % (width_Map - width_house) + 1) / 10.0f; //(width_Map * sizeOfCube);
 
 		//Checks if the "block" required to place the object is free
 		//If one of the position is not free, it will loop again
 		while (checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), height_house, width_house + 2, length_house + 2, sizeOfCube)){
 			//The section in which the house is being placed is not free
 			//Random the x and z coordinate again			
-			pos_x = (rand() % (length_Map - length_house) + 1) / (length_Map * sizeOfCube);
-			pos_z = (rand() % (width_Map - width_house) + 1) / (width_Map * sizeOfCube);
+			pos_x = (rand() % (length_Map - length_house) + 1) / 10.0f; //(length_Map * sizeOfCube);
+			pos_z = (rand() % (width_Map - width_house) + 1) / 10.0f; //(width_Map * sizeOfCube);
+			height_house = rand() % 8 + 2;
+			width_house = rand() % 8 + 5;
+			length_house = rand() % 8 + 5;
 		}
 
 		//Once we clear the condition, create the house object
@@ -873,11 +882,11 @@ void createMap(glm::vec3 location_ground, int width_Map, int length_Map, int num
 	//bool _hasWater = rand() % 2;
 	createGround(location_ground, width_Map, length_Map, sizeOfCube, false);
 
-	//Generate a certain number of trees in a scene
-	generateTreesToScene(location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
-
 	//Generate a certain number of houses in a scene
 	generateHousesToScene(location_ground, numOfHouses, width_Map, length_Map, sizeOfCube);
+
+	//Generate a certain number of trees in a scene
+	generateTreesToScene(location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
 
 	//Once all objects are pushed into the vector, start translating all the coordinates to obtain the cubes
 	//dir_translation is needed to create the cubes
@@ -885,13 +894,6 @@ void createMap(glm::vec3 location_ground, int width_Map, int length_Map, int num
 	//buffer_data has all the positions
 	//indices is used for the EBO
 	translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
-
-	//SETTING THE VIEW MATRIX
-	view_matrix = glm::lookAt(
-		glm::vec3(0.0f, 0.0f, 1.0f),		//Position of the camera
-		glm::vec3(0.0f, 0.0f, -1.0f),		//Target of the camera
-		glm::vec3(0.0f, 1.0f, 0.0f)		//Normal of the camera
-		);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -962,20 +964,20 @@ void setupVertexObjects() {
 int main() {
 
 	initialize();
-
-	//createTrees(glm::vec3(0, -1, 0), 2, 0.2);
-	srand(time(0));
+	srand(time(NULL));
 
 	//Setting up the map dimensions
-	int length_map = 100;
-	int width_map = 100;
-	float start_posX = -1 * length_map / 20;
-	float start_posZ = width_map / 20;
-	int numOfTrees = 20;
-	int numOfHouses = 10;
 	float size_cube = 0.1;
+	int length_map = 200;
+	int width_map = 200;
+	float start_posX = -1 * length_map / 20.0;
+	float start_posZ = width_map / 20.0;
+	int numOfTrees = 100;
+	int numOfHouses = 30;
+
 
 	//Set the Y-axis to -0.3f --> Ground at -0.3f, at the moment, it is the best Y position for our camera (around eye level for our sprite)
+	//View matrix is set up here
 	createMap(glm::vec3(start_posX, -0.3f, start_posZ), width_map, length_map, numOfTrees, numOfHouses, size_cube);
 
 	//Creating the vector of faces which will hold the "images" of each face of the cube
