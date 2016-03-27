@@ -20,7 +20,6 @@
 #include <vector>
 #include <cctype>
 
-
 #include <time.h>
 #include <map>
 
@@ -121,7 +120,8 @@ static vector<GLfloat> g_vertex_buffer_data;
 //for the ebo, in order to draw the shap
 static vector<GLuint> indicesOfPoints;
 
-//for hitboxes
+//for hitboxes and placement of objects in a scene
+//needed for generate and create functions
 map<string, int> map_of_coordinates;
 
 //window size
@@ -319,7 +319,7 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
-//LOAD CUBES
+//LOAD CUBE MAP FOR THE SKYBOX
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
 //load a cubeMap (for example skybox)
@@ -355,15 +355,16 @@ GLuint loadCubemap(vector<const GLchar*> faces)
 //CREATING CUBES
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-//v1 & v2 ARE VECTORS THAT WERE TAKEN FROM THE INPUT FILES
-//bufferData IS THE VECTOR THAT HOLDS THE RESULTING TRANSLATION USING v1 & v2
+//obj_coordinate is the vector which contains all the points
+//dir_translation is the direction of translation
+//bufferData IS THE VECTOR THAT HOLDS THE RESULTING TRANSLATION USING obj_coordinate & dir_translation
 //indicesOfPoints IS THE MATRIX OF indicesOfPoints, EACH POINT HAS AN INDEX
-void translationSweepMatrix(vector<GLfloat> v1, vector<GLfloat> v2, vector<GLfloat> *bufferData, vector<GLuint> *indicesOfPoints) {
+void translationSweepMatrix(vector<GLfloat> obj_coordinate, vector<GLfloat> dir_translation, vector<GLfloat> *bufferData, vector<GLuint> *indicesOfPoints) {
 
 	//FOR EACH POINT IN THE SECOND VECTOR, ADD THE FIRST VECTOR TO IT --> x1, y1, y1 + x2, y2, z2 --> New point --> STORE NEW POINT IN bufferData
-	for (int i = 0; i < v2.size() / 3; i++) {
-		for (int j = 0; j < v1.size(); j++) {
-			bufferData->push_back(v1[j] + v2[(i * 3 + j % 3)]);
+	for (int i = 0; i < dir_translation.size() / 3; i++) {
+		for (int j = 0; j < obj_coordinate.size(); j++) {
+			bufferData->push_back(obj_coordinate[j] + dir_translation[(i * 3 + j % 3)]);
 		}
 	}
 
@@ -448,31 +449,31 @@ void translationSweepMatrix(vector<GLfloat> v1, vector<GLfloat> v2, vector<GLflo
 
 }
 
-void setTranslationDirection(float size){
-	dir_translation[4] = size;
+//Set the translating vector
+void setTranslationDirection(float sizeOfCube){
+	dir_translation[4] = sizeOfCube;
 }
 
 //create a square
-//The parameter x, y, z is the starting coordinate of the square
-//The type is for water or ground or objects
-void createCube(float x, float y, float z, float size, int type) {
+//Parameter x, y, z is the starting coordinate of the square
+//Type is for water (-1) or ground/objects(1)
+void createCube(float x, float y, float z, float sizeOfCube, int type) {
 
-	string string_coordinates = to_string(x) + " " + to_string(y) + " " + to_string(z);
-
+	string string_coordinates = to_string(x) + " " + to_string(y) + " " + to_string(z); //Convert position into string form
 
 	//For each coordinate, set a boolean if it's taken
-	map_of_coordinates[string_coordinates] = type;
+	map_of_coordinates[string_coordinates] = type; //set the mapped value to the type
 
-	setTranslationDirection(size);
+	setTranslationDirection(sizeOfCube); //Depending on the size of the cube, we will need to change the translating vector
 
-	//The points are being stored in obj_coordinates
-	obj_coordinates.push_back(x + size);
+	//Store the points in obj_coordinates which will be used to create cubes
+	obj_coordinates.push_back(x + sizeOfCube);
 	obj_coordinates.push_back(y);
 	obj_coordinates.push_back(z);		
 
-	obj_coordinates.push_back(x + size);
+	obj_coordinates.push_back(x + sizeOfCube);
 	obj_coordinates.push_back(y);
-	obj_coordinates.push_back(z + size);	
+	obj_coordinates.push_back(z + sizeOfCube);
 	
 	obj_coordinates.push_back(x);
 	obj_coordinates.push_back(y);
@@ -480,7 +481,7 @@ void createCube(float x, float y, float z, float size, int type) {
 
 	obj_coordinates.push_back(x);
 	obj_coordinates.push_back(y);
-	obj_coordinates.push_back(z + size);
+	obj_coordinates.push_back(z + sizeOfCube);
 
 
 	//--------------------------------------------------------------------------------------------------------------------------------------------
@@ -496,200 +497,272 @@ void createCube(float x, float y, float z, float size, int type) {
 //CREATE LAND
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-//Water
-void createWater(glm::vec3 location, int width_water, int length_water, float size){
+/**
+In case we need a function to create a body of water...
+
+Function to create a body water in a scene
+- location_water: starting coordinate of the ground (first cube being placed in the scene)
+- width_water: width dimension of our viewable scene
+- length_water: length dimension of our viewable scene
+- sizeOfCube: fixed dimension of a single cube, value provided by createTree
+*/
+void createWater(glm::vec3 location_water, int width_water, int length_water, float sizeOfCube){
 
 	//Fill up map space with water depending on the width_water and the length_ground
 	for (int i = 0; i < width_water; i++){
 		for (int j = 0; j < length_water; j++){
 			//add another parameter for color
-			createCube(location[0] + i*size, location[1] - size, location[2] - j*size, size, -1); //-1 is for water, needed to see if an object can be placed on top --> if it's water, then you can't
+			createCube(location_water[0] + i*sizeOfCube, location_water[1] - sizeOfCube, location_water[2] - j*sizeOfCube, sizeOfCube, -1); //-1 is for water, needed to see if an object can be placed on top --> if it's water, then you can't
 		}
 	}
-
-	//Sweep the squares to get cubes
-	//REMOVE THIS FUNCTION, THIS IS USED TO CHECK IF IT IS WORKING --> ADD FUNCTION IN CREATEMAP() ONCE EVERYTHING IS CREATED
-	//translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
-
-
 }
 
-//ground
-void createGround(glm::vec3 location, int width_ground, int length_ground, float size, bool _hasWater){
-	
-	
-	int water_width = 0, water_length = 0, temp_w_length;
+/**
+Function to create the ground in a scene
+- location_ground: starting coordinate of the ground (first cube being placed in the scene)
+- width_ground: width dimension of our viewable scene
+- length_ground: length dimension of our viewable scene
+- sizeOfCube: fixed dimension of a single cube
+- _hasWater: boolean value which tells us if there's an area within the map which is covered by water
+*/
+void createGround(glm::vec3 location_ground, int width_ground, int length_ground, float sizeOfCube, bool _hasWater){
+		
+	int water_width = 0, water_length = 0;
+	int water_StartPosX = 0; int water_StartPosZ = 0;
 
+	//Randomize the dimension of the body of water and the starting position of the water
 	if (_hasWater){
+		//Scene will contain water
+		//Dimensions
 		water_width = (rand() % width_ground) / 10;
 		water_length = (rand() % length_ground) / 10;
+		//Starting position
+		water_StartPosX = (rand() % (length_ground - water_length)) / 10;			
+		water_StartPosZ = (rand() % (width_ground - water_width)) / 10;
 	}
 
-	int temp_w_width = water_width;
+	//Set a temp length 
+	int temp_w_length = water_length; //must decrease it in the loop and get the previous value
+
+	//Boolean values which will be used to know when to start adding the region with water
+	bool atZ = false;
+	bool atX = false;
 
 
 	//Fill up map space with ground depending on the width_ground and the length_ground
-	for (int i = 0; i < width_ground; i++){
-		
-		temp_w_length = water_length;
+	for (int i = 0; i < width_ground; i++){		
+
+		//Check if we arrived at the z position for the body of water
+		if (water_StartPosZ == i){
+			atZ = true;
+		}
+
+		temp_w_length = water_length; //reset the temp_w_length to the value which we had before
 
 		for (int j = 0; j < length_ground; j++){
-
-			//Water cube
-			if (temp_w_width > 0 && temp_w_length > 0){
-				createCube(location[0] + i*size, location[1], location[2] - j*size, size, -1);
-				temp_w_length--;
+			
+			//Check if we arrived at the x position for the body of water
+			if (water_StartPosX == i){
+				atX = true;
 			}
 
-			//Ground cube
+			//Add the water cube if we arrived at the starting location of our body of water and we have not reached the maximum amount of water cubes
+			if (atZ && atX && water_width > 0 && temp_w_length > 0){
+				createCube(location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, -1); //-1 for water, needed for placement of other objects
+				temp_w_length--; //decrease the length
+			}
+
+			//Generate a ground cube if it is not a water cube
 			else{
-				createCube(location[0] + i*size, location[1], location[2] - j*size, size, 1);
+				createCube(location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, 1); //1 for ground
 			}
 		}
-		temp_w_width--;
+		water_width--; //decrease the width of the body of water
 	}
-
-	//REMOVE THIS FUNCTION, IT IS USED TO CHECK IF IT IS WORKING --> ADD THIS FUNCTION IN CREATEMAP() ONCE EVERYTHING IS CREATED
-	//translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
-//CREATE TREE
+//CREATE TREE FUNCTIONS
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-//Create leaves
-void createLeaves(glm::vec3 location, int height_tree, float size){
+/**
+Function to create a leaves on a tree
+- location_leaf: starting coordinate of the leaf (right on top of the tree cube)
+- height_leaf: height dimension of the leaves (which is equal to the height of the tree), value provided by createTree
+- sizeOfCube: fixed dimension of a single cube, value provided by createTree
+*/
+void createLeaves(glm::vec3 location_leaf, int height_leaf, float sizeOfCube){
 
-	glm::vec3 obj_coordinate = location;
+	glm::vec3 obj_coordinate = location_leaf;
 
 	//Stacking the cube onto of each other
 		
-	for (int i = 0; i < height_tree + 1; i++){
+	for (int i = 0; i < height_leaf + 1; i++){
 		
-		//Have an alternating effecting for the trees
+		//Have an alternating effect for the leaves
+
+		// X
+		//XXX
+		// X
 		if (i % 2 == 0){
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], size, 1);
-			createCube(obj_coordinate[0] + size, obj_coordinate[1], obj_coordinate[2], size, 1);
-			createCube(obj_coordinate[0] - size, obj_coordinate[1], obj_coordinate[2], size, 1);
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] + size, size, 1);
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] - size, size, 1); 
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 1);
+			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, 1);
+			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, 1);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, 1);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, 1);
 		}
 
+		//X X
+		// X
+		//X X
 		else{
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], size, 1);
-			createCube(obj_coordinate[0] + size, obj_coordinate[1], obj_coordinate[2] + size, size, 1);
-			createCube(obj_coordinate[0] + size, obj_coordinate[1], obj_coordinate[2] - size, size, 1);
-			createCube(obj_coordinate[0] - size, obj_coordinate[1], obj_coordinate[2] + size, size, 1);
-			createCube(obj_coordinate[0] - size, obj_coordinate[1], obj_coordinate[2] - size, size, 1);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 1);
+			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, 1);
+			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, 1);
+			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, 1);
+			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, 1);
 		}
 
 		//Stack leaves ontop of each other
-		obj_coordinate[1] += size;
+		obj_coordinate[1] += sizeOfCube;
 
-		if (i == height_tree){
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], size, 1);
+		//Add an additional leaf (cube) at the top
+		if (i == height_leaf){
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 1);
 		}
 	}
 }
 
-//A tree takes up a 3 x 3 square --> make sure other trees do not overlap
-void createTrees(glm::vec3 location, int height_tree, float size){
 
-	glm::vec3 obj_coordinate = location;
+/**
+Function to create a tree on the map
+- location_tree: starting coordinate of the tree (where the first cube is placed)
+- height_tree: height dimension of the roof, value provided by the function which called it
+- sizeOfCube: fixed dimension of a single cube, value provided by the function which called it
+
+A tree takes up a 3 x 3 square --> make sure other trees do not overlap
+*/
+void createTrees(glm::vec3 location_tree, int height_tree, float sizeOfCube){
+
+	glm::vec3 obj_coordinate = location_tree;
 
 	//Stacking the cube onto of each other
 	for (int i = 0; i < height_tree; i++){
-		createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], size, 1);
+		createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 1);
 
 		//Stack cube ontop of each other
-		obj_coordinate[1] += size;
+		obj_coordinate[1] += sizeOfCube; //y coordinate
 	}
 
 	//Create the leaves
-	createLeaves(obj_coordinate, height_tree, size);
-
-	//REMOVE THIS FUNCTION, IT IS USED TO CHECK IF IT IS WORKING --> ADD THIS FUNCTION IN CREATEMAP() ONCE EVERYTHING IS CREATED
-	//translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
+	createLeaves(obj_coordinate, height_tree, sizeOfCube);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
-//CREATE HOUSE
+//CREATE HOUSE FUNCTIONS
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-//Roof of the house
-void createRoof(glm::vec3 location, int height_house, int width_house, int length_house, float size){
+/**
+Function to create a house on the map
+- Location_roof: starting coordinate of the house (where the first cube is placed)
+- height_roof: height dimension of the roof, value provided by the function createHouse
+- width_roof: width dimension of the roof, value provided by the function createHouse
+- length_roof: length dimension of the roof, value provided by the function createHouse
+- sizeOfCube: fixed dimension of a single cube, value provided by the function createHouse
+*/
+void createRoof(glm::vec3 location_roof, int height_roof, int width_roof, int length_roof, float sizeOfCube){
 
-	glm::vec3 obj_coordinate = location;
+	glm::vec3 obj_coordinate = location_roof;
 
 	//Stacking the cube onto of each other 
 	//And reducing the size as the height increases to create a pyramid
-	for (int i = 0; i < height_house; i++){
-		for (int k = 0; k < length_house - 2 * i; k++){
-			for (int j = 0; j < width_house - 2 * i; j++){
-				createCube(obj_coordinate[0] + k*size, obj_coordinate[1], obj_coordinate[2] + j*size, size, 1);
+	for (int i = 0; i < height_roof; i++){
+		for (int k = 0; k < length_roof - 2 * i; k++){
+			for (int j = 0; j < width_roof - 2 * i; j++){
+				createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1], obj_coordinate[2] + j*sizeOfCube, sizeOfCube, 1);
 			}
 		}
 
-		obj_coordinate[0] += size;
-		obj_coordinate[1] += size;
-		obj_coordinate[2] += size;
+		obj_coordinate[0] += sizeOfCube;
+		obj_coordinate[1] += sizeOfCube;
+		obj_coordinate[2] += sizeOfCube;
 	}
 }
 
-//Wall of the house
-void createHouse(glm::vec3 location, int height_house, int width_house, int length_house, float size){
-	glm::vec3 obj_coordinate = location;
+/**
+Function to create a house on the map
+- Location_house: starting coordinate of the house (where the first cube is placed)
+- height_house: height dimension of the house (only the walls), value provided by the function which called it (randomized)
+- width_house: width dimension of the house, value provided by the function which called it (randomized)
+- length_house: length dimension of the house, value provided by the function which called it (randomized)
+- sizeOfCube: fixed dimension of a single cube, value provided by the function which called it (randomized)
+*/
+void createHouse(glm::vec3 location_house, int height_house, int width_house, int length_house, float sizeOfCube){
+	
+	glm::vec3 obj_coordinate = location_house; //value needed in order to create the walls of the house
+
 	//Stacking the cube onto of each other
-	//Creating the walls
-	for (int i = 0; i < height_house; i++){
-		
+	//Creating the walls along the x and z axis
+	for (int i = 0; i < height_house; i++){		
 		for (int k = 0; k < length_house; k++){
-			createCube(obj_coordinate[0] + k*size, obj_coordinate[1], obj_coordinate[2], size, 1);
-			createCube(obj_coordinate[0] + k*size, obj_coordinate[1], obj_coordinate[2] + (width_house - 1)*size, size, 1);
+			createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, 1);
+			createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1], obj_coordinate[2] + (width_house - 1)*sizeOfCube, sizeOfCube, 1);
 		}
-
 		for (int j = 1; j < width_house - 1; j++){
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] + j*size, size, 1);
-			createCube(obj_coordinate[0] + (length_house - 1)*size, obj_coordinate[1], obj_coordinate[2] + j*size, size, 1);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] + j*sizeOfCube, sizeOfCube, 1);
+			createCube(obj_coordinate[0] + (length_house - 1)*sizeOfCube, obj_coordinate[1], obj_coordinate[2] + j*sizeOfCube, sizeOfCube, 1);
 		}
 
-		obj_coordinate[1] += size;
+		obj_coordinate[1] += sizeOfCube; //Go to the next level (Y-axis)
 	}
 
-	obj_coordinate[0] -= size;
-	obj_coordinate[2] -= size;
+	obj_coordinate[0] -= sizeOfCube;
+	obj_coordinate[2] -= sizeOfCube;
 
-	createRoof(obj_coordinate, height_house, width_house + 2, length_house + 2, size);
-
-	//REMOVE THIS FUNCTION, IT IS USED TO CHECK IF IT IS WORKING --> ADD THIS FUNCTION IN CREATEMAP() ONCE EVERYTHING IS CREATED
-	translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
+	//Call the following function to generate the roof
+	createRoof(obj_coordinate, height_house, width_house + 2, length_house + 2, sizeOfCube);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATE MAP
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-//Returns true if it's empty
-bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_object, int length_object, float size){
+/**
+Function which whether an object can be placed at a x,y,z coordinate
+- starting_position: the position of the object, value provided by the function that calls it
+- height_object: width dimension of the map, value provided by the function that calls it
+- width_object: width dimension of the map, value provided by the function that calls it
+- length_object: length dimension of the map, value provided by the function that calls it
+- sizeOfCube: fixed dimension of a single cube, value provided by the function that calls it
 
-	string string_coordinates;
-	string string_ground_or_water;
+An ordered MAP is used for the checkEmptySpace function --> map<string, int> map_of_coordinates
+In the createCube function, each cube's position is converted into a string and is linked to an integer value (-1, 0, 1)
 
-	//n^3...
+We use the the integer value to check whether the coordinate is occupied
+*/
+bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_object, int length_object, float sizeOfCube){
+
+	string string_coordinates; //convert the starting_position of the object into a string
+	string string_ground_or_water; //this string value will be used to check if the cube underneath is water, ground, or an empty space
+
+	//Convert each coordinate into a string a check if the coordinate is already occupied
 	for (int h = 0; h < height_object; h++){
 		for (int w = 0; w < width_object; w++){
 			for (int l = 0; l < length_object; l++){
-
-				string_coordinates = to_string(starting_position[0] + l*size) + " " + to_string(starting_position[1] + h*size) + " " + to_string(starting_position[2] + w*size);
 				
-				//only check for ground or water for the base 
+				//Convert the coordinate into a string
+				string_coordinates = to_string(starting_position[0] + l*sizeOfCube) + " " + to_string(starting_position[1] + h*sizeOfCube) + " " + to_string(starting_position[2] + w*sizeOfCube);
+				
+				//Check for ground or water for the base 
 				if (h == 0){
-					//Check the cube below to see if it's water
-					string_ground_or_water = to_string(starting_position[0] + l*size - size) + " " + to_string(starting_position[1] + h*size - size) + " " + to_string(starting_position[2] + w*size - size);
+					//For the first cubes being placed above the base, check if the cube below is ground, water or an empty space
+					
+					//Convert the coordinate of the cube below our object
+					string_ground_or_water = to_string(starting_position[0] + l*sizeOfCube - sizeOfCube) + " " + to_string(starting_position[1] + h*sizeOfCube - sizeOfCube) + " " + to_string(starting_position[2] + w*sizeOfCube - sizeOfCube);
 
 					//-1 is water, if it is 0 then it is out of bounds (there is no ground there)
 					if (map_of_coordinates[string_ground_or_water] == -1 || map_of_coordinates[string_ground_or_water] == 0){
-						return true;
+						return true; 
 					}
 				}
 
@@ -703,34 +776,56 @@ bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_
 	return false;
 }
 
-//Function to generate all the trees on the map
+/**
+Function to generate all the trees on the map
+The generation of objects in a scene requires:
+- Location_ground: starting coordinate of the ground (where the first cube is placed)
+- width_Map: width dimension of the map, provided by the function createMap
+- length_Map: length dimension of the map, provided by the function createMap
+- numOfTrees: number of trees in the scene, provided by the function createMap
+- sizeOfCube: fixed dimension of a single cube, provided by the function createMap
+*/
 void generateTreesToScene(glm::vec3 location_ground, int numOfTrees, int width_Map, int length_Map, float sizeOfCube){
 
+	//For each tree, random the height and its position
 	for (int i = 0; i < numOfTrees; i++){
 
-		//length_map - 2, because I don't want the tree to appear off the map
+		//length_map - 2, because we do not want the tree to appear off the map
 		//A tree is always 3 x 3
 		float pos_x = ((rand() % (length_Map - 4)) + 1) / 10;
 		float pos_z = -((rand() % (width_Map - 4)) + 1) / 10;
 
+		//A tree cannot be higher than 5
 		int height_tree = rand() % 5 + 2;
 
 		//Checks if the "block" required to place the object is free
 		//The height is 2*height_tree + 1 because we must account for the leaves
-		while (checkEmptySpaces(glm::vec3(pos_x - sizeOfCube, location_ground[1] + sizeOfCube, pos_z - sizeOfCube), 2 * height_tree + 1, 3, 3, sizeOfCube)){
+		//If one of the position is not free, it will loop again
+		while (checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] + pos_z - sizeOfCube), 2 * height_tree + 1, 3, 3, sizeOfCube)){
+			//If the tree cannot be placed at the specified coordinate
 
+			//Random the x and z coordinate again
 			pos_x = ((rand() % (length_Map - 4)) + 1) / 10;
 			pos_z = -((rand() % (width_Map - 4)) + 1) / 10;
 		}
 
-		//Once we clear the condition
-		createTrees(glm::vec3(pos_x, location_ground[1] + sizeOfCube, pos_z), height_tree, sizeOfCube);
+		//Create the tree object if all conditions are satisfied
+		createTrees(glm::vec3(location_ground[0] + pos_x, location_ground[1] + sizeOfCube, location_ground[2] + pos_z), height_tree, sizeOfCube);
 	}
 }
 
-//Function to generate all the houses on the map
+/**
+Function to generate all the houses on the map
+The generation of objects in a scene requires:
+- Location_ground: starting coordinate of the ground (where the first cube is placed)
+- width_Map: width dimension of the map, provided by the function createMap
+- length_Map: length dimension of the map, provided by the function createMap
+- numOfHouses: number of houses in the scene, provided by the function createMap
+- sizeOfCube: fixed dimension of a single cube, provided by the function createMap
+*/
 void generateHousesToScene(glm::vec3 location_ground, int numOfHouses, int width_Map, int length_Map, float sizeOfCube){
 	
+	//For each house, random the length, height and width... and check if it can be placed at a certain position
 	for (int i = 0; i < numOfHouses; i++){
 
 		//Random the height, width and length of the house
@@ -738,47 +833,63 @@ void generateHousesToScene(glm::vec3 location_ground, int numOfHouses, int width
 		int width_house = rand() % 7 + 4;
 		int length_house = rand() % 7 + 4;
 
-		//length_map - 2, because I don't want the tree to appear off the map
-		//A house width is always random width_house + 2 
-		//A house length is always random with length_house + 2
+		//length_map - length_house, because I don't want the house to appear off the map
+		//A house width is always a random number
+		//A house length is always a random number
 		//_ _ _ _ _    <-- Roof
 		//  _ _ _		<-- Wall
 		float pos_x = (rand() % (length_Map - length_house) + 1) / 10;
 		float pos_z = -(rand() % (width_Map - width_house) + 1) / 10;
 
 		//Checks if the "block" required to place the object is free
-		while (checkEmptySpaces(glm::vec3(pos_x - sizeOfCube, location_ground[1] + sizeOfCube, pos_z - sizeOfCube), height_house, width_house + 2, length_house + 2, sizeOfCube)){
-			//pos_x = rand() % (length_Map - 2) + 1;
+		//If one of the position is not free, it will loop again
+		while (checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] + pos_z - sizeOfCube), height_house, width_house + 2, length_house + 2, sizeOfCube)){
+			//The section in which the house is being placed is not free
+			//Random the x and z coordinate again			
 			pos_x = (rand() % (length_Map - length_house) + 1) / 10;
 			pos_z = -(rand() % (width_Map - width_house) + 1) / 10;
-			//pos_z = -(rand() % (width_Map - 2) + 1);
 		}
 
-		//Once we clear the condition
-		createHouse(glm::vec3(pos_x, location_ground[1] + sizeOfCube, pos_z), height_house, width_house, length_house, sizeOfCube);
+		//Once we clear the condition, create the house object
+		createHouse(glm::vec3(location_ground[0] + pos_x, location_ground[1] + sizeOfCube, location_ground[2] + pos_z), height_house, width_house, length_house, sizeOfCube);
 	}
 
 }
 
-//Add function to generate the map procedurally
-void createMap(glm::vec3 location, int width_Map, int length_Map, int numOfTrees, int numOfHouses, float sizeOfCube){
+/**
+Function to generate the map procedurally
+The generation of objects in a scene requires:
+- Location_ground: starting coordinate of the ground (where the first cube is placed)
+- width_Map: width dimension of the map, provided by user
+- length_Map: length dimension of the map, provided by user
+- numOfTrees: number of trees in the scene, value provided by user
+- numOfHouses: number of houses in the scene, value provided by user
+- sizeOfCube: fixed dimension of a single cube, value provided by user
+*/
+void createMap(glm::vec3 location_ground, int width_Map, int length_Map, int numOfTrees, int numOfHouses, float sizeOfCube){
 	
 	//The position of the water section will be randomized depending on how large the surface is
 	//The coordinates, width_obj and length_obj will be random
 
 	//bool _hasWater = rand() % 2;
-	createGround(location, width_Map, length_Map, sizeOfCube, false);
+	createGround(location_ground, width_Map, length_Map, sizeOfCube, false);
 
-	generateTreesToScene(location, numOfTrees, width_Map, length_Map, sizeOfCube);
+	//Generate a certain number of trees in a scene
+	generateTreesToScene(location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
 
-	generateHousesToScene(location, numOfHouses, width_Map, length_Map, sizeOfCube);
+	//Generate a certain number of houses in a scene
+	generateHousesToScene(location_ground, numOfHouses, width_Map, length_Map, sizeOfCube);
 
 	//Once all objects are pushed into the vector, start translating all the coordinates to obtain the cubes
+	//dir_translation is needed to create the cubes
+	//obj_coordinates are all the position of every point we pushed in from the generation of our objects
+	//buffer_data has all the positions
+	//indices is used for the EBO
 	translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
 
 	//SETTING THE VIEW MATRIX
 	view_matrix = glm::lookAt(
-		glm::vec3(0.0f, 1.0f, 3.0f),		//Position of the camera
+		glm::vec3(0.0f, 0.0f, 1.0f),		//Position of the camera
 		glm::vec3(0.0f, 0.0f, -1.0f),		//Target of the camera
 		glm::vec3(0.0f, 1.0f, 0.0f)		//Normal of the camera
 		);
@@ -837,7 +948,7 @@ void setupVertexObjects() {
 //MAIN FUNCTION
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-//SET UP THE MAP
+//These are just functions for testing - leave it here for now
 //Reminder: Z coordinate is always negative
 //Z can be bigger than 1
 //Y must be between -1 and 0
@@ -846,7 +957,6 @@ void setupVertexObjects() {
 //createGround(glm::vec3(0, -1.0, 0), 100, 100, 0.1);
 //createTrees(glm::vec3(0, -0.9, 0), 2, 0.1);
 //createTrees(glm::vec3(0.5, -0.9, -0.5), 3, 0.1);
-
 //createHouse(glm::vec3(1.5, -0.9, -0.5), 3, 5, 4, 0.1);
 //createRoof(glm::vec3(0, 0, 0), 3, 5, 4, 0.1);
 
@@ -855,12 +965,21 @@ int main() {
 	initialize();
 
 	//createTrees(glm::vec3(0, -1, 0), 2, 0.1);
-
 	srand(time(0));
 
-	//Set the Y-axis to -0.3 for the ground 
-	createMap(glm::vec3(0, -0.3f, 0), 100, 100, 10, 5, 0.1);
+	//Setting up the map dimensions
+	int length_map = 100;
+	int width_map = 100;
+	float start_posX = -1*length_map/20;
+	float start_posZ = width_map / 20;
+	int numOfTrees = 20;
+	int numOfHouses = 10;
+	float size_cube = 0.1;
 
+	//Set the Y-axis to -0.3f --> Ground at -0.3f, at the moment, it is the best Y position for our camera (around eye level for our sprite)
+	createMap(glm::vec3(start_posX, -0.3f, start_posZ), width_map, length_map, numOfTrees, numOfHouses, size_cube);
+
+	//Creating the vector of faces which will hold the "images" of each face of the cube
 	vector<const GLchar*> faces;
 	faces.push_back("../Source/images/right.jpg");
 	faces.push_back("../Source/images/left.jpg");
@@ -868,18 +987,20 @@ int main() {
 	faces.push_back("../Source/images/bottom.jpg");
 	faces.push_back("../Source/images/back.jpg");
 	faces.push_back("../Source/images/front.jpg");
-	GLuint cubemapTexture = loadCubemap(faces);
+	GLuint cubemapTexture = loadCubemap(faces); //load the texture
+	
 	///Load the shaders
-
 	skyboxShader_program = loadShaders("../Source/skybox.vs", "../Source/skybox.fss");
 	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
 	//textureShader_program = loadShaders("../Source/cubeMap.vs", "../Source/cubeMap.fss");
+
 	//SETUP THE VERTEX AND ELEMENT OBJECTS FOR FIRST USE
 	setupVertexObjects();
 
 	while (!glfwWindowShouldClose(window)) {
 
 		//Smoothing the movement of the camera
+		//Need to find the time between the current frame and the last frame
 		GLfloat currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -948,6 +1069,7 @@ void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mo
 
 void character_movement(){
 
+	//Smooth out the camera movement --> avoid lag 
 	GLfloat cameraSpeed = 5.0f * deltaTime;
 	// Camera controls
 	if (keys[GLFW_KEY_W])
@@ -969,10 +1091,14 @@ void character_movement(){
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //REPRESENTING MY FIGURE AS A SOLID
 	
 	if (keys[GLFW_KEY_ESCAPE]){
-		if (cursor_hidden == false)
+		if (cursor_hidden == false){
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL); //show the cursor
-		else
+			cursor_hidden = true;
+		}
+		else{
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+			cursor_hidden = false;
+		}
 	}
 }
 
