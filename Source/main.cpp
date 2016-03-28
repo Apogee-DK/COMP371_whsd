@@ -1331,11 +1331,7 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 	difference = closest - camera_center;
 
 	//requires a small bias >> account for the fact that floats are approximated
-<<<<<<< HEAD
 	return (double)glm::length(difference) - 0.075 < scene_camera.getRadius();
-=======
-	return (double)glm::length(difference) - 0.05 < scene_camera.getRadius();
->>>>>>> origin/models_minecraft
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
@@ -1390,14 +1386,6 @@ void character_movement(Scene scene_map, Camera scene_camera){
 			//update the camera position if it there are no collisions
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
-<<<<<<< HEAD
-=======
-
-		else{
-			cameraPos -= 0.01f*cameraPos;
-		}
-
->>>>>>> origin/models_minecraft
 	}		
 
 	if (keys[GLFW_KEY_S]){
@@ -1421,14 +1409,6 @@ void character_movement(Scene scene_map, Camera scene_camera){
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
-<<<<<<< HEAD
-=======
-
-		else{
-			cameraPos += 0.01f*cameraPos;
-		}
-
->>>>>>> origin/models_minecraft
 	}
 
 	if (keys[GLFW_KEY_A]){
@@ -1453,19 +1433,9 @@ void character_movement(Scene scene_map, Camera scene_camera){
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
 
-<<<<<<< HEAD
 	}
 
 	if (keys[GLFW_KEY_D]){
-=======
-		else{
-			cameraPos += 0.01f*cameraPos;
-		}
-
-	}
-
-	if (keys[GLFW_KEY_D]){		
->>>>>>> origin/models_minecraft
 		nextCameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		
 		Camera nextCamera(
@@ -1487,13 +1457,6 @@ void character_movement(Scene scene_map, Camera scene_camera){
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
-<<<<<<< HEAD
-=======
-		else{
-			cameraPos -= 0.01f*cameraPos;
-		}
-
->>>>>>> origin/models_minecraft
 	}
 
 	if (keys[GLFW_KEY_P])
