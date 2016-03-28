@@ -1094,7 +1094,7 @@ int main() {
 	//Set the Y-axis to -0.3f --> Ground at -0.3f, at the moment, it is the best Y position for our camera (around eye level for our sprite)
 	//View matrix is set up here
 	//Starting coordinates must be positive at the moment
-	createMap(glm::vec3(0.0f, -0.3f, 0.0f), width_map, length_map, numOfTrees, numOfHouses, size_cube);
+	createMap(glm::vec3(0.0f, -0.2f, 0.0f), width_map, length_map, numOfTrees, numOfHouses, size_cube);
 
 	//Testing hitbox for camera
 	//createTrees(glm::vec3(10, -0.1, -10), 3, 0.1);
@@ -1266,16 +1266,22 @@ float clamp_values(float value, float min, float max) {
 	return std::max(min, std::min(max, value));
 }
 
+inline float squared(float v){
+	return v*v;
+}
+
 //Function to detect collision
 bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 {
 	
+	float half_sizeCube = cube.getSize() / 2.0f;
+
 	// Get center point circle first 
-	glm::vec3 camera_center = scene_camera.getCameraPosition();
+	glm::vec3 camera_center = scene_camera.getCameraPosition() + scene_camera.getRadius();
 
 	// Calculate AABB info (center, half-extents) --> to determine the closest point of the cube to the sphere
-	glm::vec3 half_extents(cube.getLength() / 2.0f, cube.getWidth() / 2.0f, cube.getDepth() / 2.0f);
-	glm::vec3 cube_center = cube.getCenter();
+	glm::vec3 half_extents(half_sizeCube, half_sizeCube, half_sizeCube);
+	glm::vec3 cube_center = cube.getCenter() + half_extents;
 
 	// Get difference vector between both centers
 	glm::vec3 difference = camera_center - cube_center;
@@ -1288,9 +1294,9 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 
 	// Retrieve vector between center circle and closest point AABB and check if length <= radius
 	difference = closest - camera_center;
-	
 
-	return glm::length(difference) < scene_camera.getRadius();
+	//requires a small bias >> account for the fact that floats are approximated
+	return glm::length(difference) - 0.01 <= scene_camera.getRadius();
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
