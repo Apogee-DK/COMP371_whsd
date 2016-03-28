@@ -2,7 +2,7 @@
 
 Cube::Cube() {}
 
-Cube::Cube(glm::vec3 center, float s, string t) 
+Cube::Cube(glm::vec3 center, float s, int t) 
 	: center_position_object(center), size(s), type(t) {}
 
 
@@ -14,6 +14,6 @@ glm::vec3 Cube::getCenter(){
 	return center_position_object;
 }
 
-string Cube::getType(){
+int Cube::getType(){
 	return type;
 }
