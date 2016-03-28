@@ -23,7 +23,6 @@
 #include <time.h>
 #include <unordered_map>
 
-#include "Scene.h"
 #include "Cube.h"
 #include "Camera.h"
 
