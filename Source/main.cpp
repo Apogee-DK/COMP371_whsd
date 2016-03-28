@@ -34,6 +34,18 @@ using namespace std;
 static const size_t InitialFNV = 2166136261U;
 static const size_t FNVMultiple = 16777619;
 
+/*
+-1 water
+0 empty
+1 ground
+2 tree
+3 leaf
+4 house
+5 roof
+*/
+
+
+
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //HASH FUNCTION - using for other map coordinates
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -151,7 +163,7 @@ vector<Cube> scene_cube_objects;
 
 //for placement of objects in a scene
 //needed for generate and create functions
-unordered_map<string, string, StringHasher> map_of_coordinates;
+unordered_map<string, int, StringHasher> map_of_coordinates;
 
 //window size
 int width_window, height_window;
@@ -582,7 +594,7 @@ void setTranslationDirection(float sizeOfCube){
 //create a square
 //Parameter x, y, z is the starting coordinate of the square
 //Type is for water (-1) or ground/objects(1)
-void createCube(float x, float y, float z, float sizeOfCube, string type) {
+void createCube(float x, float y, float z, float sizeOfCube, int type) {
 	
 	//Convert position into string form for hashing
 	string string_coordinates = to_string(x) + to_string(y) + to_string(z); 
@@ -633,7 +645,7 @@ void createWater(glm::vec3 location_water, int width_water, int length_water, fl
 	for (int i = 0; i < width_water; i++){
 		for (int j = 0; j < length_water; j++){
 			//add another parameter for color
-			createCube(location_water[0] + i*sizeOfCube, location_water[1] - sizeOfCube, location_water[2] - j*sizeOfCube, sizeOfCube, "water"); //-1 is for water, needed to see if an object can be placed on top --> if it's water, then you can't
+			createCube(location_water[0] + i*sizeOfCube, location_water[1] - sizeOfCube, location_water[2] - j*sizeOfCube, sizeOfCube, -1); //-1 is for water, needed to see if an object can be placed on top --> if it's water, then you can't
 		}
 	}
 }
@@ -689,13 +701,13 @@ void createGround(glm::vec3 location_ground, int width_ground, int length_ground
 
 			//Add the water cube if we arrived at the starting location of our body of water and we have not reached the maximum amount of water cubes
 			if (atZ && atX && water_width > 0 && temp_w_length > 0){
-				createCube(location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, "water"); 
+				createCube(location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, -1); //-1 for water
 				temp_w_length--; //decrease the length
 			}
 
 			//Generate a ground cube if it is not a water cube
 			else{
-				createCube(location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, "ground"); //1 for ground
+				createCube(location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, 1); //1 for ground
 			}
 		}
 		water_width--; //decrease the width of the body of water
@@ -726,22 +738,22 @@ void createLeaves(glm::vec3 location_leaf, int height_leaf, float sizeOfCube){
 		//XXX
 		// X
 		if (i % 2 == 0){
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, "leaf");
-			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, "leaf");
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, "leaf");
-			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, "leaf");
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, "leaf");
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, 3);
+			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, 3);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 3);
+			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, 3);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, 3);
 		}
 
 		//X X
 		// X
 		//X X
 		else{
-			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, "leaf");
-			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, "leaf");
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, "leaf");
-			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, "leaf");
-			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, "leaf");
+			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, 3);
+			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2] + sizeOfCube, sizeOfCube, 3);
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 3);
+			createCube(obj_coordinate[0] - sizeOfCube, obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, 3);
+			createCube(obj_coordinate[0] + sizeOfCube, obj_coordinate[1], obj_coordinate[2] - sizeOfCube, sizeOfCube, 3);
 		}
 
 		//Stack leaves ontop of each other
@@ -749,7 +761,7 @@ void createLeaves(glm::vec3 location_leaf, int height_leaf, float sizeOfCube){
 
 		//Add an additional leaf (cube) at the top
 		if (i == height_leaf){
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, "leaf");
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 3);
 		}
 	}
 }
@@ -768,7 +780,7 @@ void createTrees(glm::vec3 location_tree, int height_tree, float sizeOfCube){
 
 	//Stacking the cube onto of each other
 	for (int i = 0; i < height_tree; i++){
-		createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, "tree");
+		createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2], sizeOfCube, 2);
 
 		//Stack cube ontop of each other
 		obj_coordinate[1] += sizeOfCube; //y coordinate
@@ -799,7 +811,7 @@ void createRoof(glm::vec3 location_roof, int height_roof, int width_roof, int le
 	for (int i = 0; i < height_roof; i++){
 		for (int j = 0; j < width_roof - 2 * i; j++){
 			for (int k = 0; k < length_roof - 2 * i; k++){
-				createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1] + i*sizeOfCube, obj_coordinate[2] - j*sizeOfCube, sizeOfCube, "roof");
+				createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1] + i*sizeOfCube, obj_coordinate[2] - j*sizeOfCube, sizeOfCube, 5);
 			}
 		}
 
@@ -826,12 +838,12 @@ void createHouse(glm::vec3 location_house, int height_house, int width_house, in
 	for (int i = 0; i < height_house; i++){
 
 		for (int k = 0; k < length_house; k++){
-			createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, "house");
-			createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1], obj_coordinate[2] - (width_house - 1)*sizeOfCube, sizeOfCube, "house");
+			createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1], obj_coordinate[2], sizeOfCube, 4);
+			createCube(obj_coordinate[0] + k*sizeOfCube, obj_coordinate[1], obj_coordinate[2] - (width_house - 1)*sizeOfCube, sizeOfCube, 4);
 		}
 		for (int j = 1; j < width_house - 1; j++){
-			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] - j*sizeOfCube, sizeOfCube, "house");
-			createCube(obj_coordinate[0] + (length_house - 1)*sizeOfCube, obj_coordinate[1], obj_coordinate[2] - j*sizeOfCube, sizeOfCube, "house");
+			createCube(obj_coordinate[0], obj_coordinate[1], obj_coordinate[2] - j*sizeOfCube, sizeOfCube, 4);
+			createCube(obj_coordinate[0] + (length_house - 1)*sizeOfCube, obj_coordinate[1], obj_coordinate[2] - j*sizeOfCube, sizeOfCube, 4);
 		}
 
 		obj_coordinate[1] += sizeOfCube; //Go to the next level (Y-axis)
@@ -879,14 +891,14 @@ bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_
 					string_ground_or_water = to_string(starting_position[0] + l*sizeOfCube) + to_string(starting_position[1] - sizeOfCube) + to_string(starting_position[2] - w*sizeOfCube);
 
 					//-1 is water, if it is 0 then it is out of bounds (there is no ground there)
-					if (map_of_coordinates[string_ground_or_water] == "water"){
+					if (map_of_coordinates[string_ground_or_water] == -1){
 						return true;
 					}
 				}
 
 				//Add restriction to boundary
 				//Empty string
-				if (map_of_coordinates[string_coordinates].length() != 0){
+				if (map_of_coordinates[string_coordinates] != 0){
 					return true;
 				}
 			}
@@ -1265,8 +1277,7 @@ inline float squared(float v){
 
 //Function to detect collision
 bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
-{
-	
+{	
 	float half_sizeCube = cube.getSize() / 2.0f;
 
 	// Get center point circle first 
@@ -1289,7 +1300,7 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 	difference = closest - camera_center;
 
 	//requires a small bias >> account for the fact that floats are approximated
-	return glm::length(difference) - 0.04 < scene_camera.getRadius();
+	return glm::length(difference) - 0.075 < scene_camera.getRadius();
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
@@ -1342,7 +1353,7 @@ void character_movement(){
 		}
 
 		else{
-			cameraPos -= 0.1f*(glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]));
+			cameraPos -= 0.01f*nextCameraPos;
 		}
 
 	}		
@@ -1367,13 +1378,13 @@ void character_movement(){
 		}
 
 		else{
-			cameraPos += 0.1f*(glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]));
+			cameraPos += 0.01f*nextCameraPos;
 		}
 
 	}
 
 	if (keys[GLFW_KEY_A]){
-		nextCameraPos -= 0.1f*(glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed);
+		nextCameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 
 		Camera nextCamera(
 			nextCameraPos,
@@ -1391,7 +1402,7 @@ void character_movement(){
 		}
 
 		else{
-			cameraPos += 0.1f*(glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed);
+			cameraPos += 0.01f*nextCameraPos;
 		}
 
 	}
@@ -1414,7 +1425,7 @@ void character_movement(){
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
 		else{
-			cameraPos -= 0.1f*(glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed);
+			cameraPos -= 0.1f*nextCameraPos;
 		}
 
 	}
@@ -1462,7 +1473,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 	yaw += xoffset;
 	pitch += yoffset;
 
-	// Make sure that when pitch is out of bounds, screen doesn't get flipped
+	// Make sure that when pitch is out of bounds, screen does not get flipped
 	if (pitch > 89.0f)
 		pitch = 89.0f;
 	if (pitch < -89.0f)
