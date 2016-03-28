@@ -35,7 +35,7 @@ static const size_t InitialFNV = 2166136261U;
 static const size_t FNVMultiple = 16777619;
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
-//HASH FUNCTION - will use later
+//HASH FUNCTION - using for other map coordinates
 //--------------------------------------------------------------------------------------------------------------------------------------------
 struct StringHasher {
 
@@ -154,7 +154,7 @@ vector<Cube> scene_cube_objects;
 
 //for placement of objects in a scene
 //needed for generate and create functions
-unordered_map<string, string> map_of_coordinates;
+unordered_map<string, string, StringHasher> map_of_coordinates;
 
 //window size
 int width_window, height_window;
@@ -1296,7 +1296,7 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 	difference = closest - camera_center;
 
 	//requires a small bias >> account for the fact that floats are approximated
-	return glm::length(difference) - 0.01 <= scene_camera.getRadius();
+	return glm::length(difference) - 0.04 < scene_camera.getRadius();
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
@@ -1342,9 +1342,14 @@ void character_movement(){
 
 		//check if there's a collision
 		if (!has_collided(nextCamera, scene_cube_objects)){
+			//cout << "W did not hit" << endl;
 			cameraPos = nextCameraPos;
 			//update the camera position if it there are no collisions
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+		}
+
+		else{
+			cameraPos -= 0.1f*(glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]));
 		}
 
 	}		
@@ -1363,14 +1368,19 @@ void character_movement(){
 
 
 		if (!has_collided(nextCamera, scene_cube_objects)){
+			//cout << "S did not hit" << endl;
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+		}
+
+		else{
+			cameraPos += 0.1f*(glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]));
 		}
 
 	}
 
 	if (keys[GLFW_KEY_A]){
-		nextCameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;	
+		nextCameraPos -= 0.1f*(glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed);
 
 		Camera nextCamera(
 			nextCameraPos,
@@ -1382,8 +1392,13 @@ void character_movement(){
 			);
 		
 		if (!has_collided(nextCamera, scene_cube_objects)){
+			//cout << "A did not hit" << endl;
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+		}
+
+		else{
+			cameraPos += 0.1f*(glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed);
 		}
 
 	}
@@ -1401,9 +1416,14 @@ void character_movement(){
 			);
 
 		if (!has_collided(nextCamera, scene_cube_objects)){
+			//cout << "D did not hit" << endl;
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
+		else{
+			cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+		}
+
 	}
 
 	if (keys[GLFW_KEY_P])
