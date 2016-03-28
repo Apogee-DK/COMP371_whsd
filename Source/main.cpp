@@ -1421,7 +1421,7 @@ void character_movement(){
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
 		else{
-			cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+			cameraPos -= 0.1f*(glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed);
 		}
 
 	}
