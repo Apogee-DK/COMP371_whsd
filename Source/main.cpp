@@ -143,9 +143,6 @@ vector<float> dir_translation = {
 //for the coordinates of objects in our scene
 vector<GLfloat> g_vertex_buffer_data;
 
-//type of cubes
-vector<string> typeOfCubes; //ground, water, leaf, house, roof
-
 //for the ebo, in order to draw the shap
 vector<GLuint> indicesOfPoints;
 
@@ -202,7 +199,6 @@ float findTheta(glm::vec3 v1, glm::vec3 v2) {
 	return acos(dotProd / magnitude);
 
 }
-
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //INITIALIZATION AND DELETION
@@ -594,11 +590,9 @@ void createCube(float x, float y, float z, float sizeOfCube, string type) {
 	//Needed for collisions
 	scene_cube_objects.push_back(Cube(glm::vec3(x, y, z), sizeOfCube, type)); //create anonymous cube objecct, push cube into vector
 
-	//Might change the design
-	//typeOfCubes.push_back(type); //for the type of cube
-
-	//For each coordinate, set a type
-	map_of_coordinates[string_coordinates] = type; //set the mapped value to the type
+	//Each coordinate will be a key to a type
+	//Using this because it is much faster to hash the string coordinate and access it later (to check if an object can be placed in that location)
+	map_of_coordinates[string_coordinates] = type;
 
 	setTranslationDirection(sizeOfCube); //Depending on the size of the cube, we will need to change the translating vector
 
