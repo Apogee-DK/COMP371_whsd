@@ -592,14 +592,13 @@ void createCube(float x, float y, float z, float sizeOfCube, string type) {
 	string string_coordinates = to_string(x) + to_string(y) + to_string(z); 
 
 	//Needed for collisions
-	scene_cube_objects.push_back(Cube(glm::vec3(x, y, z), sizeOfCube)); //create anonymous cube objecct, push cube into vector
+	scene_cube_objects.push_back(Cube(glm::vec3(x, y, z), sizeOfCube, type)); //create anonymous cube objecct, push cube into vector
 
 	//Might change the design
-	typeOfCubes.push_back(type); //for the type of cube
+	//typeOfCubes.push_back(type); //for the type of cube
 
 	//For each coordinate, set a type
 	map_of_coordinates[string_coordinates] = type; //set the mapped value to the type
-
 
 	setTranslationDirection(sizeOfCube); //Depending on the size of the cube, we will need to change the translating vector
 
