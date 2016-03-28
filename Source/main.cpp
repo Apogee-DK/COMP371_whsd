@@ -1281,7 +1281,7 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 	float half_sizeCube = cube.getSize() / 2.0f;
 
 	// Get center point circle first 
-	glm::vec3 camera_center = scene_camera.getCameraPosition() + scene_camera.getRadius();
+	glm::vec3 camera_center = scene_camera.getCameraPosition() + (float)scene_camera.getRadius();
 
 	// Calculate AABB info (center, half-extents) --> to determine the closest point of the cube to the sphere
 	glm::vec3 half_extents(half_sizeCube, half_sizeCube, half_sizeCube);
@@ -1300,7 +1300,7 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 	difference = closest - camera_center;
 
 	//requires a small bias >> account for the fact that floats are approximated
-	return glm::length(difference) - 0.075 < scene_camera.getRadius();
+	return (double)glm::length(difference) - 0.05 < scene_camera.getRadius();
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
@@ -1353,7 +1353,7 @@ void character_movement(){
 		}
 
 		else{
-			cameraPos -= 0.01f*nextCameraPos;
+			cameraPos -= 0.01f*cameraPos;
 		}
 
 	}		
@@ -1378,7 +1378,7 @@ void character_movement(){
 		}
 
 		else{
-			cameraPos += 0.01f*nextCameraPos;
+			cameraPos += 0.01f*cameraPos;
 		}
 
 	}
@@ -1402,13 +1402,13 @@ void character_movement(){
 		}
 
 		else{
-			cameraPos += 0.01f*nextCameraPos;
+			cameraPos += 0.01f*cameraPos;
 		}
 
 	}
 
 	if (keys[GLFW_KEY_D]){		
-		nextCameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;			
+		nextCameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		
 		Camera nextCamera(
 			nextCameraPos,
@@ -1425,7 +1425,7 @@ void character_movement(){
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
 		else{
-			cameraPos -= 0.1f*nextCameraPos;
+			cameraPos -= 0.01f*cameraPos;
 		}
 
 	}
