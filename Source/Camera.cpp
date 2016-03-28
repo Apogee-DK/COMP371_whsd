@@ -1,16 +1,16 @@
 #include "Camera.h"
 
 Camera::Camera() {
-	cameraPos = glm::vec3(0.0f, 0.0f, 1.0f);
+	cameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
 	cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 	cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 	yaw = -90.0f;
 	pitch = 0.0f;
-	radius = 0.1f;
+	radius = 0.1;
 
 }
 
-Camera::Camera(glm::vec3 position, glm::vec3 front, glm::vec3 up, GLfloat y, GLfloat p, float r) 
+Camera::Camera(glm::vec3 position, glm::vec3 front, glm::vec3 up, GLfloat y, GLfloat p, double r) 
 	: cameraPos(position), cameraFront(front), cameraUp(up), yaw(y), pitch(p), radius(r) {}
 
 void Camera::setCameraPosition(glm::vec3 v){
@@ -33,6 +33,9 @@ void Camera::setPitch(GLfloat p){
 	pitch = p;
 }
 
+void Camera::setRadius(double r){
+	radius = r;
+}
 
 glm::vec3 Camera::getCameraPosition(){
 	return cameraPos;
@@ -54,7 +57,7 @@ GLfloat Camera::getPitch(){
 	return pitch;
 }
 
-float Camera::getRadius(){
+double Camera::getRadius(){
 	return radius;
 }
 

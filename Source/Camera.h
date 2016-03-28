@@ -12,12 +12,12 @@ private:
 	glm::vec3 cameraUp;
 	GLfloat yaw;
 	GLfloat pitch;
-	float radius;
+	double radius;
 	
 
 public:
 	Camera();
-	Camera(glm::vec3, glm::vec3, glm::vec3, GLfloat, GLfloat, float);
+	Camera(glm::vec3, glm::vec3, glm::vec3, GLfloat, GLfloat, double);
 
 	void setCameraPosition(glm::vec3);
 	void setCameraFront(glm::vec3);
@@ -30,7 +30,8 @@ public:
 	glm::vec3 getCameraFront();
 	glm::vec3 getCameraUp();
 
-	float getRadius();
+	void setRadius(double);
+	double getRadius();
 
 	GLfloat getYaw();
 	GLfloat getPitch();

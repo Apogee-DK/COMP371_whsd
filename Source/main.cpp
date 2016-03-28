@@ -23,6 +23,7 @@
 #include <time.h>
 #include <unordered_map>
 
+#include "Scene.h"
 #include "Cube.h"
 #include "Camera.h"
 
@@ -123,15 +124,6 @@ GLuint view_matrix_id = 0;
 GLuint model_matrix_id = 0;
 GLuint proj_matrix_id = 0;
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 1.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-GLfloat yaw = -90.0f;	// Magnitude of how much we're looking to the left or to the right
-GLfloat pitch = 0.0f;	// How much we are looking up or down
-
-Camera scene_camera; //creates everything from above
-
 ///Transformations
 glm::mat4 proj_matrix;
 glm::mat4 view_matrix;
@@ -141,9 +133,27 @@ GLuint VBO, VAO, EBO;
 GLuint skyboxVAO, skyboxVBO;
 GLfloat point_size = 3.0f;
 
+//for the coordinates of objects in our scene
+vector<GLfloat> g_vertex_buffer_data;
+
+//for the ebo, in order to draw the shap
+vector<GLuint> indicesOfPoints;
+
+//PUT this in camera later
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+GLfloat yaw = -90.0f;	// Magnitude of how much we're looking to the left or to the right
+GLfloat pitch = 0.0f;	// How much we are looking up or down
+
+//Mouse positions
 float lastY = 0, lastX = 0;
 
-//for the points on a square
+//All the cubes in the scene
+vector<Cube> scene_cube_objects;
+
+//for the points on a square in order to draw the cube
 vector<GLfloat> obj_coordinates;
 
 //translate all the points in obj_coordinates to get a cube
@@ -151,15 +161,6 @@ vector<float> dir_translation = {
 	0.0f, 0.0f, 0.0f,
 	0.0f, 0.1f, 0.0f
 };
-
-//for the coordinates of objects in our scene
-vector<GLfloat> g_vertex_buffer_data;
-
-//for the ebo, in order to draw the shap
-vector<GLuint> indicesOfPoints;
-
-//All the cubes in the scene
-vector<Cube> scene_cube_objects;
 
 //for placement of objects in a scene
 //needed for generate and create functions
@@ -185,7 +186,7 @@ GLfloat lastFrame = 0.0f;  	// Time of last frame
 void key_callback(GLFWwindow*, int, int, int, int);
 void mouse_callback(GLFWwindow*, double, double);
 void windowResize(GLFWwindow*, int, int);
-void character_movement();
+void character_movement(Scene, Camera);
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //MATHEMATICAL OPERATIONS
@@ -433,6 +434,10 @@ void translationSweepMatrix(vector<GLfloat> obj_coordinate, vector<GLfloat> dir_
 			bufferData->push_back(obj_coordinate[j] + dir_translation[(i * 3 + j % 3)]); //8 points for the cube
 		}
 	}
+
+	
+
+
 
 	//Relation between type cube
 	//For the first 4 points to make the cube, we added the type
@@ -1075,20 +1080,36 @@ void setupVertexObjects() {
 //MAIN FUNCTION
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-//These are just functions for testing - leave it here for now
+/*These are just functions for testing - leave it here for now
 //Reminder: Z coordinate is always negative
 //Z can be bigger than 1
 //Y must be between -1 and 0
 //X can be bigger than 1
-//createWater(glm::vec3(0, -1.0, 0), 5, 5, 0.1);
-//createGround(glm::vec3(0, -1.0, 0), 100, 100, 0.1);
+createWater(glm::vec3(0, -1.0, 0), 5, 5, 0.1);
+createGround(glm::vec3(0, -1.0, 0), 100, 100, 0.1);
 
+Testing hitbox for camera
+createTrees(glm::vec3(10, -0.1, -10), 3, 0.1);
+createTrees(glm::vec3(-100, -0.1, 10), 2, 0.1);
+createTrees(glm::vec3(0, 0, 0), 3, 0.1);
+createHouse(glm::vec3(1.5, -0.1, -20), 3, 5, 4, 0.1);
+createRoof(glm::vec3(0, 0, 0), 3, 5, 4, 0.1);
+createCube(0.05, 0, 0.05, 0.5, "ground");
+translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
+*/
 
 int main() {
 
 	initialize();
 	srand(time(NULL));
 
+	//Setting the world environment
+	Camera scene_camera; //creates everything from above
+	Scene scene_map(200, 200, 0.1); //scene containing everything
+
+	scene_map.setNumberOfHouses(20);
+	scene_map.setNumberOfTrees(100);
+	
 	//Setting up the map dimensions
 	float size_cube = 0.1;
 	int length_map = 200;
@@ -1100,15 +1121,11 @@ int main() {
 	//View matrix is set up here
 	//Starting coordinates must be positive at the moment
 	createMap(glm::vec3(0.0f, -0.2f, 0.0f), width_map, length_map, numOfTrees, numOfHouses, size_cube);
-
-	//Testing hitbox for camera
-	//createTrees(glm::vec3(10, -0.1, -10), 3, 0.1);
-	//createTrees(glm::vec3(-100, -0.1, 10), 2, 0.1);
+	
 	//createTrees(glm::vec3(0, 0, 0), 3, 0.1);
-	//createHouse(glm::vec3(1.5, -0.1, -20), 3, 5, 4, 0.1);
-	//createRoof(glm::vec3(0, 0, 0), 3, 5, 4, 0.1);
-	//createCube(0.05, 0, 0.05, 0.5, "ground");
 	//translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &indicesOfPoints);
+
+	scene_camera.setRadius(size_cube);
 
 	//Creating the vector of faces which will hold the "images" of each face of the cube
 	vector<const GLchar*> faces;
@@ -1138,7 +1155,7 @@ int main() {
 
 		// update other events like input handling
 		glfwPollEvents();
-		character_movement();
+		character_movement(scene_map, scene_camera);
 
 		// wipe the drawing surface clear
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1275,13 +1292,27 @@ inline float squared(float v){
 	return v*v;
 }
 
+bool out_of_bounds(Scene scene_map, Camera scene_camera){
+
+	glm::vec3 max = scene_map.getMaxBoundaryMap();
+	glm::vec3 min = scene_map.getMinBoundaryMap();
+
+	glm::vec3 cam_pos = scene_camera.getCameraPosition();
+
+	if (cam_pos[0] > max[0] || cam_pos[1] > max[1] || cam_pos[2] < max[2] || cam_pos[0] < min[0] || cam_pos[1] < min[1] || cam_pos[2] > min[2]){		
+		return true;
+	}
+		
+	return false;
+}
+
 //Function to detect collision
 bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 {	
 	float half_sizeCube = cube.getSize() / 2.0f;
 
 	// Get center point circle first 
-	glm::vec3 camera_center = scene_camera.getCameraPosition() + scene_camera.getRadius();
+	glm::vec3 camera_center = scene_camera.getCameraPosition() + (float)scene_camera.getRadius();
 
 	// Calculate AABB info (center, half-extents) --> to determine the closest point of the cube to the sphere
 	glm::vec3 half_extents(half_sizeCube, half_sizeCube, half_sizeCube);
@@ -1300,7 +1331,7 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 	difference = closest - camera_center;
 
 	//requires a small bias >> account for the fact that floats are approximated
-	return glm::length(difference) - 0.075 < scene_camera.getRadius();
+	return (double)glm::length(difference) - 0.075 < scene_camera.getRadius();
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
@@ -1321,13 +1352,13 @@ bool has_collided(Camera scene_camera, vector<Cube> scene_cubes){
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
 //Function to move our camera
-void character_movement(){
+void character_movement(Scene scene_map, Camera scene_camera){
 
 	//Smooth out the camera movement --> avoid lag 
 	GLfloat cameraSpeed = 5.0f * deltaTime;	
 	//Temporary value to store the current camera position
 	glm::vec3 nextCameraPos = cameraPos;
-	
+
 	// Camera controls
 	if (keys[GLFW_KEY_W]){	
 
@@ -1344,18 +1375,17 @@ void character_movement(){
 			scene_camera.getRadius()
 			);
 
+		if (out_of_bounds(scene_map, nextCamera)){
+			//do nothing
+		}
+
 		//check if there's a collision
-		if (!has_collided(nextCamera, scene_cube_objects)){
+		else if (!has_collided(nextCamera, scene_cube_objects)){
 			//cout << "W did not hit" << endl;
 			cameraPos = nextCameraPos;
 			//update the camera position if it there are no collisions
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
-
-		else{
-			cameraPos -= 0.01f*nextCameraPos;
-		}
-
 	}		
 
 	if (keys[GLFW_KEY_S]){
@@ -1370,17 +1400,15 @@ void character_movement(){
 			scene_camera.getRadius()
 			);
 
+		if (out_of_bounds(scene_map, nextCamera)){
+			//do nothing
+		}
 
-		if (!has_collided(nextCamera, scene_cube_objects)){
+		else if (!has_collided(nextCamera, scene_cube_objects)){
 			//cout << "S did not hit" << endl;
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
-
-		else{
-			cameraPos += 0.01f*nextCameraPos;
-		}
-
 	}
 
 	if (keys[GLFW_KEY_A]){
@@ -1394,21 +1422,21 @@ void character_movement(){
 			scene_camera.getPitch(),
 			scene_camera.getRadius()
 			);
-		
-		if (!has_collided(nextCamera, scene_cube_objects)){
+
+		if (out_of_bounds(scene_map, nextCamera)){
+			//do nothing
+		}
+
+		else if (!has_collided(nextCamera, scene_cube_objects)){
 			//cout << "A did not hit" << endl;
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
 
-		else{
-			cameraPos += 0.01f*nextCameraPos;
-		}
-
 	}
 
-	if (keys[GLFW_KEY_D]){		
-		nextCameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;			
+	if (keys[GLFW_KEY_D]){
+		nextCameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 		
 		Camera nextCamera(
 			nextCameraPos,
@@ -1419,15 +1447,16 @@ void character_movement(){
 			scene_camera.getRadius()
 			);
 
-		if (!has_collided(nextCamera, scene_cube_objects)){
+
+		if (out_of_bounds(scene_map, nextCamera)){
+			//do nothing
+		}
+
+		else if (!has_collided(nextCamera, scene_cube_objects) && !out_of_bounds(scene_map, nextCamera)){
 			//cout << "D did not hit" << endl;
 			cameraPos = nextCameraPos;
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
-		else{
-			cameraPos -= 0.1f*nextCameraPos;
-		}
-
 	}
 
 	if (keys[GLFW_KEY_P])
