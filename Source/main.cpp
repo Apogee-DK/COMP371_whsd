@@ -41,11 +41,14 @@ struct StringHasher {
 
 	size_t operator()(const std::string& s) const {
 		
-		vector<int> arr;
-		arr.push_back(stoi(s.substr(0, 2)));
-		arr.push_back(stoi(s.substr(2, 4)));
-		arr.push_back(stoi(s.substr(4)));
-		return (((((arr[0] + 31) * 37) + arr[1]) * 41) + arr[2]) * 53;		
+		size_t hash = InitialFNV;
+
+		for (int i = 0; i < s.length(); i++)
+		{
+			hash = (hash * FNVMultiple) ^ s[i];
+		}
+
+		return hash;
 	}
 };
 
@@ -586,7 +589,7 @@ void setTranslationDirection(float sizeOfCube){
 void createCube(float x, float y, float z, float sizeOfCube, string type) {
 	
 	//Convert position into string form for hashing
-	string string_coordinates = to_string((int)((x + 1) * 10)) + to_string((int)((y + 1) * 10)) + to_string((int)((fabs(z) + 1) * 10)); 
+	string string_coordinates = to_string(x) + to_string(y) + to_string(z); 
 
 	//Needed for collisions
 	scene_cube_objects.push_back(Cube(glm::vec3(x, y, z), sizeOfCube)); //create anonymous cube objecct, push cube into vector
@@ -873,14 +876,14 @@ bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_
 			for (int l = 0; l < length_object; l++){
 
 				//Convert the coordinate into a string
-				string_coordinates = to_string(starting_position[0] + l*sizeOfCube) + " " + to_string(starting_position[1] + h*sizeOfCube) + " " + to_string(starting_position[2] - w*sizeOfCube);
+				string_coordinates = to_string(starting_position[0] + l*sizeOfCube) + to_string(starting_position[1] + h*sizeOfCube) + to_string(starting_position[2] - w*sizeOfCube);
 
 				//Check for ground or water for the base 
 				if (h == 0){
 					//For the first cubes being placed above the base, check if the cube below is ground, water or an empty space
 
 					//Convert the coordinate of the cube below our object
-					string_ground_or_water = to_string(starting_position[0] + l*sizeOfCube) + " " + to_string(starting_position[1] - sizeOfCube) + " " + to_string(starting_position[2] - w*sizeOfCube);
+					string_ground_or_water = to_string(starting_position[0] + l*sizeOfCube) + to_string(starting_position[1] - sizeOfCube) + to_string(starting_position[2] - w*sizeOfCube);
 
 					//-1 is water, if it is 0 then it is out of bounds (there is no ground there)
 					if (map_of_coordinates[string_ground_or_water] == "water"){
@@ -1266,6 +1269,7 @@ float clamp_values(float value, float min, float max) {
 //Function to detect collision
 bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 {
+	
 	// Get center point circle first 
 	glm::vec3 camera_center = scene_camera.getCameraPosition();
 
@@ -1284,6 +1288,7 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 
 	// Retrieve vector between center circle and closest point AABB and check if length <= radius
 	difference = closest - camera_center;
+	
 
 	return glm::length(difference) < scene_camera.getRadius();
 }

@@ -71,6 +71,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Source\Camera.cpp" />
+    <ClCompile Include="..\Source\Cube.cpp" />
     <ClCompile Include="..\Source\main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -88,6 +90,10 @@
     <Image Include="..\Source\images\left.jpg" />
     <Image Include="..\Source\images\right.jpg" />
     <Image Include="..\Source\images\top.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Source\Camera.h" />
+    <ClInclude Include="..\Source\Cube.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
