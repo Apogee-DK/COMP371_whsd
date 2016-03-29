@@ -1,7 +1,11 @@
 #include "Scene.h"
 #include <algorithm>
 
-Scene::Scene(){}
+Scene::Scene(){
+	length_map = 0;
+	width_map = 0;
+	size_cube = 0;
+}
 
 //Set the size of map and the size of the cubes
 Scene::Scene(int l, int w, float s) 
@@ -13,6 +17,31 @@ Scene::Scene(int l, int w, float s)
 
 }
 
+void Scene::update(){
+
+	if (size_cube > 0 && length_map > 0 && width_map > 0){
+		max_x = length_map*size_cube + min_x;
+		max_y = max(length_map*size_cube, width_map*size_cube) + min_y;
+		min_z = -1 * width_map*size_cube + max_z; //negative number
+	}
+
+}
+
+void Scene::setSceneWidth(int w){
+	if (width_map == 0)
+		width_map = w;
+}
+
+void Scene::setSceneLength(int l){
+	if (length_map == 0)
+		length_map = l;
+}
+
+void Scene::setSceneCubeSize(float s){
+	if (size_cube == 0)
+		 size_cube = s;
+}
+
 //Set objects functions
 void Scene::setNumberOfTrees(int n){
 	numOfTrees = n;
@@ -21,6 +50,11 @@ void Scene::setNumberOfTrees(int n){
 void Scene::setNumberOfHouses(int n){
 	numOfHouses = n;
 }
+
+void Scene::setNumberOfHills(int n){
+	numOfHills = n;
+}
+
 
 glm::vec3 Scene::getMinBoundaryMap(){
 	return glm::vec3(min_x, min_y, max_z);
