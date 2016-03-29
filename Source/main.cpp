@@ -44,25 +44,36 @@ static const size_t FNVMultiple = 16777619;
 4 house
 5 roof
 6 character hand
+7 hill
 */
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //HASH FUNCTION - using for other map coordinates
 //--------------------------------------------------------------------------------------------------------------------------------------------
-struct StringHasher {
 
-	size_t operator()(const std::string& s) const {
-		
+struct intHasher {
+
+	size_t operator()(const int& i) const {
+
 		size_t hash = InitialFNV;
 
-		for (int i = 0; i < s.length(); i++)
-		{
-			hash = (hash * FNVMultiple) ^ s[i];
-		}
+		hash = (hash * FNVMultiple) ^ i;
 
 		return hash;
 	}
 };
+
+
+int coordinatetoint(float _x, float _y, float _z){
+
+	int x = _x * 10.0f;
+	int y = _y * 10.0f;
+	int z = _z * 10.0f;
+
+	int first_hash = ((((x + 11) * 13) + y) * 17) + z;
+
+	return first_hash;
+}
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //PROTOTYPE FUNCTIONS AND VARIABLES
@@ -141,7 +152,7 @@ vector<GLfloat> g_vertex_buffer_data;
 vector<GLuint> obj_indicesOfPoints;
 
 //for the points on a square in order to draw the cube
-vector<GLfloat> obj_coordinates;
+vector<GLfloat>* obj_coordinates = new vector<GLfloat>();
 
 //for the coordinates of character
 vector<GLfloat> character_vertex_buffer_data;
@@ -150,7 +161,7 @@ vector<GLfloat> character_vertex_buffer_data;
 vector<GLuint> character_indicesOfPoints;
 
 //for the points on a square in order to draw the cube
-vector<GLfloat> character_coordinates;
+vector<GLfloat>* character_coordinates = new vector<GLfloat>();
 
 //PUT this in camera later
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -183,7 +194,7 @@ vector<float> dir_translation = {
 
 //for placement of objects in a scene
 //needed for generate and create functions
-unordered_map<string, int, StringHasher> map_of_coordinates;
+unordered_map<int, int, intHasher>* map_of_coordinates = new unordered_map<int, int, intHasher>();
 
 //window size
 int width_window, height_window;
@@ -205,7 +216,7 @@ GLfloat lastFrame = 0.0f;  	// Time of last frame
 void key_callback(GLFWwindow*, int, int, int, int);
 void mouse_callback(GLFWwindow*, double, double);
 void windowResize(GLFWwindow*, int, int);
-void character_movement(Scene, Camera, float);
+void character_movement(Scene, glm::vec3, double, float);
 void mouse_click(GLFWwindow*, int, int, int);
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -628,7 +639,9 @@ void createCube(vector<GLfloat>* obj_coordinates, float x, float y, float z, flo
 
 	//Each coordinate will be a key to a type
 	//Using this because it is much faster to hash the string coordinate and access it later (to check if an object can be placed in that location)
-	map_of_coordinates[to_string(x) + to_string(y) + to_string(z)] = type;
+	
+	if (type == -1)
+		(*map_of_coordinates)[coordinatetoint(x, y, z)] = type;
 
 	setTranslationDirection(sizeOfCube); //Depending on the size of the cube, we will need to change the translating vector
 
@@ -742,20 +755,30 @@ void createGround(vector<GLfloat>* obj_coordinates, glm::vec3 location_ground, i
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATE HILLS
 //--------------------------------------------------------------------------------------------------------------------------------------------
-
 void createHill(vector<GLfloat>* obj_coordinates, glm::vec3 location_hill, int height_hill, int width_hill, int length_hill, float sizeOfCube){
 
 	glm::vec3 coordinate = location_hill;
+	int type = 7;
 
 	for (int h = 0; h < height_hill; h++){
 
-		if (width_hill <= 0 || length_hill <= 0){
+		if (width_hill <= 2 || length_hill <= 2){
 			break;
 		}
 
+		if (h == 0){
+			//Setting the base area which is taken up by the hill
+			for (int w1 = 0; w1 < width_hill + 2; w1++){
+				for (int l1 = 0; l1 < length_hill + 2; l1++){
+					(*map_of_coordinates)[coordinatetoint(coordinate[0] + l1*sizeOfCube, coordinate[1], coordinate[2] - w1*sizeOfCube)] = type;
+				}
+			}
+		}
+
+		//Assign the position of the cubes
 		for (int w = 0; w < width_hill; w++){
 			for (int l = 0; l < length_hill; l++){
-				createCube(obj_coordinates, coordinate[0] + l*sizeOfCube, coordinate[1] + h*sizeOfCube, coordinate[2] - w*sizeOfCube, sizeOfCube, 1);
+				createCube(obj_coordinates, coordinate[0] + l*sizeOfCube, coordinate[1] + h*sizeOfCube, coordinate[2] - w*sizeOfCube, sizeOfCube, type);
 			}
 		}
 
@@ -763,8 +786,8 @@ void createHill(vector<GLfloat>* obj_coordinates, glm::vec3 location_hill, int h
 		coordinate[2] -= sizeOfCube;
 
 		//I could random this
-		width_hill -= 4;
-		length_hill -= 4;
+		width_hill -= 3;
+		length_hill -= 3;
 	}
 }
 
@@ -781,6 +804,7 @@ Function to create a leaves on a tree
 void createLeaves(vector<GLfloat>* obj_coordinates, glm::vec3 location_leaf, int height_leaf, float sizeOfCube){
 
 	glm::vec3 coordinate = location_leaf;
+	int type = 3;
 
 	//Stacking the cube onto of each other
 
@@ -792,22 +816,22 @@ void createLeaves(vector<GLfloat>* obj_coordinates, glm::vec3 location_leaf, int
 		//XXX
 		// X
 		if (i % 2 == 0){
-			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2] + sizeOfCube, sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0] - sizeOfCube, coordinate[1], coordinate[2], sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0] + sizeOfCube, coordinate[1], coordinate[2], sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2] - sizeOfCube, sizeOfCube, 3);
+			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2] + sizeOfCube, sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0] - sizeOfCube, coordinate[1], coordinate[2], sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0] + sizeOfCube, coordinate[1], coordinate[2], sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2] - sizeOfCube, sizeOfCube, type);
 		}
 
 		//X X
 		// X
 		//X X
 		else{
-			createCube(obj_coordinates, coordinate[0] - sizeOfCube, coordinate[1], coordinate[2] + sizeOfCube, sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0] + sizeOfCube, coordinate[1], coordinate[2] + sizeOfCube, sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0] - sizeOfCube, coordinate[1], coordinate[2] - sizeOfCube, sizeOfCube, 3);
-			createCube(obj_coordinates, coordinate[0] + sizeOfCube, coordinate[1], coordinate[2] - sizeOfCube, sizeOfCube, 3);
+			createCube(obj_coordinates, coordinate[0] - sizeOfCube, coordinate[1], coordinate[2] + sizeOfCube, sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0] + sizeOfCube, coordinate[1], coordinate[2] + sizeOfCube, sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0] - sizeOfCube, coordinate[1], coordinate[2] - sizeOfCube, sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0] + sizeOfCube, coordinate[1], coordinate[2] - sizeOfCube, sizeOfCube, type);
 		}
 
 		//Stack leaves ontop of each other
@@ -815,7 +839,7 @@ void createLeaves(vector<GLfloat>* obj_coordinates, glm::vec3 location_leaf, int
 
 		//Add an additional leaf (cube) at the top
 		if (i == height_leaf){
-			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, 3);
+			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, type);
 		}
 	}
 }
@@ -831,10 +855,24 @@ A tree takes up a 3 x 3 square --> make sure other trees do not overlap
 void createTrees(vector<GLfloat>* obj_coordinates, glm::vec3 location_tree, int height_tree, float sizeOfCube){
 
 	glm::vec3 coordinate = location_tree;
+	int type = 2;
+	
+	//Only consider base of the tree which takes up the area
+	(*map_of_coordinates)[coordinatetoint(coordinate[0] - sizeOfCube, coordinate[1], coordinate[2] + sizeOfCube)] = type;
+	(*map_of_coordinates)[coordinatetoint(coordinate[0], coordinate[1], coordinate[2] + sizeOfCube)] = type;
+	(*map_of_coordinates)[coordinatetoint(coordinate[0] + sizeOfCube, coordinate[1], coordinate[2] + sizeOfCube)] = type;
+
+	(*map_of_coordinates)[coordinatetoint(coordinate[0] - sizeOfCube, coordinate[1], coordinate[2])] = type;
+	(*map_of_coordinates)[coordinatetoint(coordinate[0], coordinate[1], coordinate[2])] = type;
+	(*map_of_coordinates)[coordinatetoint(coordinate[0] + sizeOfCube, coordinate[1], coordinate[2])] = type;
+
+	(*map_of_coordinates)[coordinatetoint(coordinate[0] - sizeOfCube, coordinate[1], coordinate[2] - sizeOfCube)] = type;
+	(*map_of_coordinates)[coordinatetoint(coordinate[0], coordinate[1], coordinate[2])] = type;
+	(*map_of_coordinates)[coordinatetoint(coordinate[0] + sizeOfCube, coordinate[1], coordinate[2] - sizeOfCube)] = type;
 
 	//Stacking the cube onto of each other
 	for (int i = 0; i < height_tree; i++){
-		createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, 2);
+		createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2], sizeOfCube, type);
 
 		//Stack cube ontop of each other
 		coordinate[1] += sizeOfCube; //y coordinate
@@ -886,18 +924,28 @@ Function to create a house on the map
 void createHouse(vector<GLfloat>* obj_coordinates, glm::vec3 location_house, int height_house, int width_house, int length_house, float sizeOfCube){
 
 	glm::vec3 coordinate = location_house; //value needed in order to create the walls of the house
+	int type = 4;
 
 	//Stacking the cube onto of each other
 	//Creating the walls along the x and z axis
 	for (int i = 0; i < height_house; i++){
+		
+		if (i == 0){			
+			//Setting the base area which is taken up by the house
+			for (int w1 = 0; w1 < width_house + 2; w1++){
+				for (int l1 = 0; l1 < length_house + 2; l1++){
+					(*map_of_coordinates)[coordinatetoint(coordinate[0] + l1*sizeOfCube, coordinate[1], coordinate[2] - w1*sizeOfCube)] = type;
+				}
+			}
+		}
 
 		for (int k = 0; k < length_house; k++){
-			createCube(obj_coordinates, coordinate[0] + k*sizeOfCube, coordinate[1], coordinate[2], sizeOfCube, 4);
-			createCube(obj_coordinates, coordinate[0] + k*sizeOfCube, coordinate[1], coordinate[2] - (width_house - 1)*sizeOfCube, sizeOfCube, 4);
+			createCube(obj_coordinates, coordinate[0] + k*sizeOfCube, coordinate[1], coordinate[2], sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0] + k*sizeOfCube, coordinate[1], coordinate[2] - (width_house - 1)*sizeOfCube, sizeOfCube, type);
 		}
 		for (int j = 1; j < width_house - 1; j++){
-			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2] - j*sizeOfCube, sizeOfCube, 4);
-			createCube(obj_coordinates, coordinate[0] + (length_house - 1)*sizeOfCube, coordinate[1], coordinate[2] - j*sizeOfCube, sizeOfCube, 4);
+			createCube(obj_coordinates, coordinate[0], coordinate[1], coordinate[2] - j*sizeOfCube, sizeOfCube, type);
+			createCube(obj_coordinates, coordinate[0] + (length_house - 1)*sizeOfCube, coordinate[1], coordinate[2] - j*sizeOfCube, sizeOfCube, type);
 		}
 
 		coordinate[1] += sizeOfCube; //Go to the next level (Y-axis)
@@ -915,11 +963,14 @@ void createCharacter(vector<GLfloat>* character_coordinates, Camera scene_camera
 
 	glm::vec3 coordinate = scene_camera.getCameraPosition(); //Starting location of our sprite
 	float size = sizeOfCube / 2;
+	int type = 6;
+
+	//map_of_coordinates[to_string((*character_coordinates)[0]) + to_string((*character_coordinates)[1]) + to_string((*character_coordinates)[2])] = type;
 
 	//Create the hand
-	createCube(character_coordinates, coordinate[0] + 1.25f*size, coordinate[1] - size, coordinate[2] - 3 * size, size / 2, 6);
-	createCube(character_coordinates, coordinate[0] + 1.25f*size, coordinate[1] - size / 2, coordinate[2] - 3 * size, size / 2, 6);
-	createCube(character_coordinates, coordinate[0] + 1.25f*size, coordinate[1], coordinate[2] - 3 * size, size / 2, 6);
+	createCube(character_coordinates, coordinate[0] + 1.25f*size, coordinate[1] - size, coordinate[2] - 3 * size, size / 2, type);
+	createCube(character_coordinates, coordinate[0] + 1.25f*size, coordinate[1] - size / 2, coordinate[2] - 3 * size, size / 2, type);
+	createCube(character_coordinates, coordinate[0] + 1.25f*size, coordinate[1], coordinate[2] - 3 * size, size / 2, type);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -941,49 +992,33 @@ We use the the integer value to check whether the coordinate is occupied
 */
 bool checkEmptySpaces(glm::vec3 starting_position, int height_object, int width_object, int length_object, float sizeOfCube){
 
-	string string_coordinates; //convert the starting_position of the object into a string
-	string string_ground_or_water; //this string value will be used to check if the cube underneath is water, ground, or an empty space
-
 	//Convert each coordinate into a string a check if the coordinate is already occupied
-	for (int h = 0; h < height_object; h++){
-		for (int w = 0; w < width_object; w++){
-			for (int l = 0; l < length_object; l++){
+	for (int w = 0; w < width_object; w++){
+		for (int l = 0; l < length_object; l++){
 
-				//Convert the coordinate into a string
-				string_coordinates = to_string(starting_position[0] + l*sizeOfCube) + to_string(starting_position[1] + h*sizeOfCube) + to_string(starting_position[2] - w*sizeOfCube);
+			//-1 is water
+			if ((*map_of_coordinates)[coordinatetoint(starting_position[0] + l*sizeOfCube, starting_position[1] - sizeOfCube, starting_position[2] - w*sizeOfCube)] == -1){
+				return true;
+			}
 
-				//Check for ground or water for the base 
-				if (h == 0){
-					//For the first cubes being placed above the base, check if the cube below is ground, water or an empty space
-
-					//Convert the coordinate of the cube below our object
-					string_ground_or_water = to_string(starting_position[0] + l*sizeOfCube) + to_string(starting_position[1] - sizeOfCube) + to_string(starting_position[2] - w*sizeOfCube);
-
-					//-1 is water, if it is 0 then it is out of bounds (there is no ground there)
-					if (map_of_coordinates[string_ground_or_water] == -1){
-						return true;
-					}
-				}
-
-				//Add restriction to boundary
-				//Empty string
-				if (map_of_coordinates[string_coordinates] != 0){
-					return true;
-				}
+			//Add restriction to boundary
+			//Empty string
+			if ((*map_of_coordinates)[coordinatetoint(starting_position[0] + l*sizeOfCube, starting_position[1], starting_position[2] - w*sizeOfCube)] != 0){
+				return true;
 			}
 		}
 	}
+
 	return false;
 }
-
 
 void generateHillsToScene(vector<GLfloat>* obj_coordinates, glm::vec3 location_ground, int numOfHills, int width_Map, int length_Map, float sizeOfCube){
 	
 	for (int i = 0; i < numOfHills; i++){
 		//Random the height, width and length of the hill
-		int height_hill = rand() % 5 + 5;
-		int width_hill = rand() % 10 + 7;
-		int length_hill = rand() % 10 + 8;
+		int height_hill = rand() % 10 + 5;
+		int width_hill = rand() % 20 + 7;
+		int length_hill = rand() % 20 + 8;
 		
 		float pos_x = (int)(rand() % (length_Map - length_hill) + 1) / 10.0f;
 		float pos_z = (int)(rand() % (width_Map - width_hill) + 1) / 10.0f; 
@@ -993,9 +1028,9 @@ void generateHillsToScene(vector<GLfloat>* obj_coordinates, glm::vec3 location_g
 			//Random the x and z coordinate again			
 			pos_x = (int)(rand() % (length_Map - length_hill) + 1) / 10.0f; //(length_Map * sizeOfCube);
 			pos_z = (int)(rand() % (width_Map - width_hill) + 1) / 10.0f; //(width_Map * sizeOfCube);
-			height_hill = rand() % 8 + 5;
-			width_hill = rand() % 8 + 7;
-			length_hill = rand() % 8 + 8;
+			height_hill = rand() % 10 + 5;
+			width_hill = rand() % 20 + 7;
+			length_hill = rand() % 20 + 8;
 		}
 
 		createHill(obj_coordinates, glm::vec3(location_ground[0] + pos_x, location_ground[1] + sizeOfCube, location_ground[2] - pos_z), height_hill, width_hill, length_hill, sizeOfCube);
@@ -1101,27 +1136,27 @@ void createMap(Camera scene_camera, glm::vec3 location_ground, int width_Map, in
 	//The coordinates, width_obj and length_obj will be random
 
 	//bool _hasWater = rand() % 2;
-	createGround(&obj_coordinates, location_ground, width_Map, length_Map, sizeOfCube, false);
+	createGround(obj_coordinates, location_ground, width_Map, length_Map, sizeOfCube, false);
 
 	//Create the character and set the camera to its position
-	createCharacter(&character_coordinates, scene_camera, sizeOfCube);
-	translationSweepMatrix(dir_translation, &character_coordinates, &character_vertex_buffer_data, &character_indicesOfPoints);
+	createCharacter(character_coordinates, scene_camera, sizeOfCube);
+	translationSweepMatrix(dir_translation, character_coordinates, &character_vertex_buffer_data, &character_indicesOfPoints);
 	
 	//Generate a certain number of hills in a scene
-	generateHillsToScene(&obj_coordinates, location_ground, numOfHills, width_Map, length_Map, sizeOfCube);
+	generateHillsToScene(obj_coordinates, location_ground, numOfHills, width_Map, length_Map, sizeOfCube);
 
 	//Generate a certain number of houses in a scene
-	generateHousesToScene(&obj_coordinates, location_ground, numOfHouses, width_Map, length_Map, sizeOfCube);
+	generateHousesToScene(obj_coordinates, location_ground, numOfHouses, width_Map, length_Map, sizeOfCube);
 
 	//Generate a certain number of trees in a scene
-	generateTreesToScene(&obj_coordinates, location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
+	generateTreesToScene(obj_coordinates, location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
 
 	//Once all objects are pushed into the vector, start translating all the coordinates to obtain the cubes
 	//dir_translation is needed to create the cubes
 	//obj_coordinates are all the position of every point we pushed in from the generation of our objects
 	//buffer_data has all the positions
 	//indices is used for the EBO
-	translationSweepMatrix(dir_translation, &obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
+	translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
 
 }
 
@@ -1213,40 +1248,42 @@ int main() {
 	initialize();
 	srand(time(NULL));
 
-	//Setting the world environment
-	scene_map.setSceneWidth(100);
-	scene_map.setSceneLength(100);
-	scene_map.setSceneCubeSize(0.1); //scene containing everything
-	//scene_map.setNumberOfHouses(20);
-	//scene_map.setNumberOfTrees(100);
-	scene_map.update();
-	
 	//Setting up the map dimensions
-	float size_cube = 0.1;
-	int length_map = 100;
-	int width_map = 100;
-	int numOfTrees = 10;
-	int numOfHouses = 2;
-	int numOfHills = 1;
+	float size_cube = 0.1f;
+	int length_map = 300;
+	int width_map = 300;
+	int numOfTrees = 200;
+	int numOfHouses = 50;
+	int numOfHills = 10;
+	
+	//Setting the world environment
+	scene_map.setSceneWidth(length_map);
+	scene_map.setSceneLength(width_map);
+	scene_map.setSceneCubeSize(size_cube); //scene containing everything
+	scene_map.setNumberOfHouses(numOfHouses);
+	scene_map.setNumberOfTrees(numOfTrees);
+	scene_map.setNumberOfHills(numOfHills);
+	scene_map.update();
 
 	//Set the Y-axis to -0.3f --> Ground at -0.3f, at the moment, it is the best Y position for our camera (around eye level for our sprite)
 	//View matrix is set up here
 	//Starting coordinates must be positive at the moment
 	createMap(scene_camera, glm::vec3(0.0f, -0.2f, 0.0f), width_map, length_map, numOfTrees, numOfHouses, numOfHills, size_cube);
 	
-	//createCharacter(&character_coordinates, scene_camera, 0.1);
-	//translationSweepMatrix(dir_translation, &character_coordinates, &character_vertex_buffer_data, &character_indicesOfPoints);
+	//createCharacter(character_coordinates, scene_camera, 0.1);
+	//translationSweepMatrix(dir_translation, character_coordinates, &character_vertex_buffer_data, &character_indicesOfPoints);
 
-	//createGround(&obj_coordinates, glm::vec3(0, -0.2f, 0), 10, 10, 0.1, false);
-	//createCube(&obj_coordinates, 0.5f, -0.1f, -0.5f, 0.1, 1);
-	//createTrees(&obj_coordinates, glm::vec3(0, -0.1f, -0.5f), 3, 0.1);
-	//translationSweepMatrix(dir_translation, &obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
+	//createGround(obj_coordinates, glm::vec3(0, -0.2f, 0), 10, 10, 0.1, false);
+	//createCube(obj_coordinates, 0.5f, -0.1f, -0.5f, 0.1, 3);
+	//createTrees(obj_coordinates, glm::vec3(0, -0.1f, -0.5f), 3, 0.1);
+	//translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
 
-	obj_coordinates.clear();
-	character_coordinates.clear();
-	map_of_coordinates.clear();
+	delete obj_coordinates;
+	delete character_coordinates;
+	delete map_of_coordinates;
 
 	scene_camera.setRadius(size_cube);
+	double radius = scene_camera.getRadius();
 
 	//Creating the vector of faces which will hold the "images" of each face of the cube
 	vector<const GLchar*> faces;
@@ -1276,8 +1313,7 @@ int main() {
 
 		// update other events like input handling
 		glfwPollEvents();
-
-		character_movement(scene_map, scene_camera, size_cube);
+		character_movement(scene_map, cameraPos, radius, size_cube);
 		//updateCharacter(cameraPos, &character_vertex_buffer_data, size_cube);
 		//refreshCharacter();
 
@@ -1409,14 +1445,12 @@ inline float squared(float v){
 	return v*v;
 }
 
-bool out_of_bounds(Scene scene_map, Camera scene_camera){
+bool out_of_bounds(Scene scene_map, glm::vec3 scene_camera_position){
 
 	glm::vec3 max = scene_map.getMaxBoundaryMap();
 	glm::vec3 min = scene_map.getMinBoundaryMap();
 
-	glm::vec3 cam_pos = scene_camera.getCameraPosition();
-
-	if (cam_pos[0] > max[0] || cam_pos[1] > max[1] || cam_pos[2] < max[2] || cam_pos[0] < min[0] || cam_pos[1] < min[1] || cam_pos[2] > min[2]){		
+	if (scene_camera_position[0] > max[0] || scene_camera_position[1] > max[1] || scene_camera_position[2] < max[2] || scene_camera_position[0] < min[0] || scene_camera_position[1] < min[1] || scene_camera_position[2] > min[2]){
 		return true;
 	}
 		
@@ -1424,12 +1458,12 @@ bool out_of_bounds(Scene scene_map, Camera scene_camera){
 }
 
 //Function to detect collision
-bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
+bool checkCollision(glm::vec3 scene_camera_position, double radius, Cube cube) // AABB - Circle collision
 {	
-	float half_sizeCube = cube.getSize() / 2.0f;
+	float half_sizeCube = cube.getSize() / 2;
 
 	// Get center point circle first 
-	glm::vec3 camera_center = scene_camera.getCameraPosition() + (float)scene_camera.getRadius();
+	glm::vec3 camera_center = scene_camera_position + (float)radius;
 
 	// Calculate AABB info (center, half-extents) --> to determine the closest point of the cube to the sphere
 	glm::vec3 half_extents(half_sizeCube, half_sizeCube, half_sizeCube);
@@ -1448,15 +1482,17 @@ bool checkCollision(Camera scene_camera, Cube cube) // AABB - Circle collision
 	difference = closest - camera_center;
 
 	//requires a small bias >> account for the fact that floats are approximated
-	return (double)glm::length(difference) - 0.04 < scene_camera.getRadius();
+	return (double)glm::length(difference) - 0.035 < radius;
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
-bool has_collided(Camera scene_camera, vector<Cube> scene_cubes){
+bool has_collided(Scene scene_map, glm::vec3 scene_camera_position, double radius, vector<Cube> scene_cubes, bool all_objects){
 
-	for (Cube cube : scene_cubes){
-		//Detect collision of camera with object
-		if (checkCollision(scene_camera, cube)){
+	int w = scene_map.getSceneWidth();
+	int l = scene_map.getSceneLength();
+	
+	for (int i = w*l; i < scene_cubes.size(); i++){
+		if (checkCollision(scene_camera_position, radius, scene_cubes[i])){
 			return true;
 		}
 	}
@@ -1469,276 +1505,315 @@ bool has_collided(Camera scene_camera, vector<Cube> scene_cubes){
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
 //Function to move our camera
-void character_movement(Scene scene_map, Camera scene_camera, float size_cube){
+void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double radius, float size_cube){
 
 	//Smooth out the camera movement --> avoid lag 
-	GLfloat cameraSpeed = 2.0f * deltaTime;	
+	GLfloat cameraSpeed = 1.0 * deltaTime;	
 	//Temporary value to store the current camera position
 	glm::vec3 nextCameraPos = cameraPos;
 
 	if (keys[GLFW_KEY_SPACE]){
 		if (!freeRoam && !jumped){
 			glm::vec3 nextCameraPos = cameraPos;
-			glm::vec3 translation_change = glm::vec3(0, 0.1f, 0);
+
+			glm::vec3 translation_change = glm::vec3(0.0f, 0.1f, 0.0f);
 			nextCameraPos += translation_change;
 
-			Camera nextCamera(
-				nextCameraPos,
-				scene_camera.getCameraFront(),
-				scene_camera.getCameraUp(),
-				scene_camera.getYaw(),
-				scene_camera.getPitch(),
-				scene_camera.getRadius()
-				);
-
-			if (out_of_bounds(scene_map, nextCamera)){
+			if (out_of_bounds(scene_map, nextCameraPos)){
 				//do nothing
 			}
 
-			else if (!has_collided(nextCamera, scene_cube_objects)){
+			else if (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
 				//Make the camera move up in the Y-axis 
 				cameraPos = nextCameraPos;
 				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch); //update the camera
 				jumped = true; //set the global boolean value jump to true
 			}
-			
+
+			glm::vec3 translation_change2 = glm::vec3(cameraSpeed * cameraFront[0], 0.0f, cameraSpeed * cameraFront[2]);
+			nextCameraPos += translation_change2 - translation_change;
+			glm::vec3 onTopOfNextCam = nextCameraPos + translation_change;
+
+			if (has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false) && !has_collided(scene_map, onTopOfNextCam, radius, scene_cube_objects, false)){
+				nextCameraPos += translation_change;
+				cameraPos = nextCameraPos;
+				jumped = false;
+			}			
 		}
 	}
 	else if (!keys[GLFW_KEY_SPACE] && !freeRoam && jumped){
+		/*Previous code
 		glm::vec3 nextCameraPos = cameraPos;
-		glm::vec3 translation_change = glm::vec3(0, 0.1f, 0);
+		glm::vec3 translation_change = glm::vec3(0.0f, 0.1f, 0.0f);
 		nextCameraPos -= translation_change;
-
-		Camera nextCamera(
-			nextCameraPos,
-			scene_camera.getCameraFront(),
-			scene_camera.getCameraUp(),
-			scene_camera.getYaw(),
-			scene_camera.getPitch(),
-			scene_camera.getRadius()
-			);
-
-		if (out_of_bounds(scene_map, nextCamera) || has_collided(nextCamera, scene_cube_objects)){
-			//do nothing, keep camera here
+		
+		if (out_of_bounds(scene_map, nextCameraPos) || has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+			cameraPos += translation_change;
 		}
 		else{
 			//Decrease position by 1 block size
-			nextCamera.setCameraPosition(nextCameraPos - translation_change);
+			nextCameraPos -= translation_change;
 
-			//While we do not reach a solid cube
-			while (!has_collided(nextCamera, scene_cube_objects)){
-				//Decrease next cam position by 1 block size until we hit a solid cube
-				nextCamera.setCameraPosition(nextCamera.getCameraPosition() - translation_change);
+			if (nextCameraPos[1] >= -0.1f){
+				//While we do not reach a solid cube
+				while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+					//Decrease next cam position by 1 block size until we hit a solid cube
+					if (nextCameraPos[1] == -0.1f){
+						break;
+					}
+					nextCameraPos -= translation_change;
+				}
 			}
-
-			//Increase position of the actual camera by 1 block size
-			cameraPos = nextCamera.getCameraPosition() + translation_change;
-
+			
+			cameraPos = nextCameraPos + translation_change;
 			//Update camera
 			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
+		*/
+
+		cameraPos[1] -= 0.1f;
 
 		jumped = false;
-
-		//model_matrix = glm::translate(model_matrix, glm::vec3(0, 0.1f, 0));
 	}
 
-
-	
+	//USE A TIMER INSTEAD TO DO A CHECK UP
+	//WHEN CAMERA HITS OBJECT --> SET A BOOLEAN TO FALSE AND KEEP CHECK FOR OBSTACLES
+	//WHEN CAMERA DOES NOT HIT OBJECT --> SET BOOLEAN TO TRUE, AND ONLY CHECK A COUPLE OF TIMES
 
 	// Camera controls
 	if (keys[GLFW_KEY_W]){
-		if (!freeRoam){
-			//Set the temporary position to the requested camera location
-			glm::vec3 translation_change = glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]);
-			nextCameraPos += translation_change;
-		}
-		else{
+		if (freeRoam){
 			//Set the temporary position to the requested camera location
 			glm::vec3 translation_change = glm::vec3(cameraSpeed * cameraFront[0], cameraSpeed * cameraFront[1], cameraSpeed * cameraFront[2]);
 			nextCameraPos += translation_change;
-		}
 
-		//Create a temp camera
-		Camera nextCamera(
-			nextCameraPos, 
-			scene_camera.getCameraFront(),
-			scene_camera.getCameraUp(), 
-			scene_camera.getYaw(), 
-			scene_camera.getPitch(), 
-			scene_camera.getRadius()
-			);
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
+			}
 
-		if (out_of_bounds(scene_map, nextCamera)){
-			//do nothing
-		}
-
-		//check if there's a collision
-		else if (!has_collided(nextCamera, scene_cube_objects)){
-			
-			glm::vec3 delta(0, 0.1f, 0);
-			glm::vec3 bottom_cam = nextCamera.getCameraPosition() - delta;
-			nextCamera.setCameraPosition(bottom_cam);
-			
-			//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
-
-			//Check if the camera is on a solid surface
-			if (!has_collided(nextCamera, scene_cube_objects)){
-
-				//Camera is not on a solid surface
-				cameraPos = nextCameraPos - delta;
-				//update the camera position if it there are no collisions
+			else if (nextCameraPos[1] > -0.1f && !has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+				cameraPos = nextCameraPos;
 				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 			}
-			else{
-				cameraPos = nextCameraPos;
+
+		}
+		else{
+			//Set the temporary position to the requested camera location
+			glm::vec3 translation_change = glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]);
+			nextCameraPos += translation_change;
+
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
 			}
-		}		
+
+			//check if there's a collision
+			else if (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+
+				glm::vec3 delta(0.0f, 0.1f, 0.0f);
+
+				if (nextCameraPos[1] >= 0.1f && nextCameraPos[1] <= 0.2f)
+					nextCameraPos = glm::vec3(nextCameraPos[0], 0, nextCameraPos[2]);
+				else
+					nextCameraPos = nextCameraPos - delta;
+
+				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
+				//Check if the camera is on a solid surface
+				if (nextCameraPos[1] > -0.2f){
+					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+						if (nextCameraPos[1] == -0.1f){
+							break;
+						}
+						nextCameraPos[1] -= 0.1f;
+					}
+					//Camera is not on a solid surface
+					cameraPos = nextCameraPos + delta;
+					//update the camera position if it there are no collisions
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+
+				}
+
+				else{
+					cameraPos = nextCameraPos + delta;
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+				}
+			}
+		}
 	}		
 
-	if (keys[GLFW_KEY_S]){
-		if (!freeRoam){
-			//Set the temporary position to the requested camera location
-			glm::vec3 translation_change = glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]);
-			nextCameraPos -= translation_change;
-		}
-		else{
+	else if (keys[GLFW_KEY_S]){
+		if (freeRoam){
 			//Set the temporary position to the requested camera location
 			glm::vec3 translation_change = glm::vec3(cameraSpeed * cameraFront[0], cameraSpeed * cameraFront[1], cameraSpeed * cameraFront[2]);
 			nextCameraPos -= translation_change;
-		}
 
-		Camera nextCamera(
-			nextCameraPos,
-			scene_camera.getCameraFront(),
-			scene_camera.getCameraUp(),
-			scene_camera.getYaw(),
-			scene_camera.getPitch(),
-			scene_camera.getRadius()
-			);
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
+			}
 
-
-		if (out_of_bounds(scene_map, nextCamera)){
-			//do nothing
-		}
-
-		//check if there's a collision
-		else if (!has_collided(nextCamera, scene_cube_objects)){
-
-			glm::vec3 delta(0, 0.1f, 0);
-			glm::vec3 bottom_cam = nextCamera.getCameraPosition() - delta;
-			nextCamera.setCameraPosition(bottom_cam);
-
-			//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
-
-			//Check if the camera is on a solid surface
-			if (!has_collided(nextCamera, scene_cube_objects)){
-
-				//Camera is not on a solid surface
-				cameraPos = nextCameraPos - delta;
-				//update the camera position if it there are no collisions
+			else if (nextCameraPos[1] > -0.1f && !has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+				cameraPos = nextCameraPos;
 				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 			}
-			else{
-				cameraPos = nextCameraPos;
+		}
+		else{
+			//Set the temporary position to the requested camera location
+			glm::vec3 translation_change = glm::vec3(cameraSpeed * cameraFront[0], 0, cameraSpeed * cameraFront[2]);
+			nextCameraPos -= translation_change;
+
+
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
+			}
+
+			//check if there's a collision
+			else if (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+
+				glm::vec3 delta(0.0f, 0.1f, 0.0f);
+
+				if (nextCameraPos[1] >= 0.1f && nextCameraPos[1] <= 0.2f)
+					nextCameraPos = glm::vec3(nextCameraPos[0], 0, nextCameraPos[2]);
+				else
+					nextCameraPos = nextCameraPos - delta;
+
+				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
+				//Check if the camera is on a solid surface
+				if (nextCameraPos[1] > -0.2f){
+					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+						if (nextCameraPos[1] == -0.1f){
+							break;
+						}
+						nextCameraPos[1] -= 0.1f;
+					}
+					//Camera is not on a solid surface
+					cameraPos = nextCameraPos + delta;
+					//update the camera position if it there are no collisions
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+
+				}
+
+				else{
+					cameraPos = nextCameraPos + delta;
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+				}
 			}
 		}
 	}
 
-	if (keys[GLFW_KEY_A]){
-		if (!freeRoam){
+	else if (keys[GLFW_KEY_A]){
+		if (freeRoam){
 			glm::vec3 translation_change = glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			nextCameraPos -= translation_change;
+
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
+			}
+
+			else if (nextCameraPos[1] > -0.1f && !has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+				cameraPos = nextCameraPos;
+				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+			}
 		}
 		else{
 			glm::vec3 translation_change = glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			nextCameraPos -= translation_change;
-		}
-
-		Camera nextCamera(
-			nextCameraPos,
-			scene_camera.getCameraFront(),
-			scene_camera.getCameraUp(),
-			scene_camera.getYaw(),
-			scene_camera.getPitch(),
-			scene_camera.getRadius()
-			);
 
 
-		if (out_of_bounds(scene_map, nextCamera)){
-			//do nothing
-		}
-
-		//check if there's a collision
-		else if (!has_collided(nextCamera, scene_cube_objects)){
-
-			glm::vec3 delta(0, 0.1f, 0);
-			glm::vec3 bottom_cam = nextCamera.getCameraPosition() - delta;
-			nextCamera.setCameraPosition(bottom_cam);
-
-			//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
-
-			//Check if the camera is on a solid surface
-			if (!has_collided(nextCamera, scene_cube_objects)){
-
-				//Camera is not on a solid surface
-				cameraPos = nextCameraPos - delta;
-				//update the camera position if it there are no collisions
-				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
 			}
-			else{
-				cameraPos = nextCameraPos;
+
+			//check if there's a collision
+			else if (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+
+				glm::vec3 delta(0.0f, 0.1f, 0.0f);
+
+				if (nextCameraPos[1] >= 0.1f && nextCameraPos[1] <= 0.2f)
+					nextCameraPos = glm::vec3(nextCameraPos[0], 0, nextCameraPos[2]);
+				else
+					nextCameraPos = nextCameraPos - delta;
+
+				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
+				//Check if the camera is on a solid surface
+				if (nextCameraPos[1] > -0.2f){
+					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+						if (nextCameraPos[1] == -0.1f){
+							break;
+						}
+						nextCameraPos[1] -= 0.1f;
+					}
+					//Camera is not on a solid surface
+					cameraPos = nextCameraPos + delta;
+					//update the camera position if it there are no collisions
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+
+				}
+
+				else{
+					cameraPos = nextCameraPos + delta;
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+				}
 			}
 		}
 
 	}
 
-	if (keys[GLFW_KEY_D]){
-		if (!freeRoam){
+	else if (keys[GLFW_KEY_D]){
+		if (freeRoam){
 			glm::vec3 translation_change = glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			nextCameraPos += translation_change;
+
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
+			}
+
+			else if (nextCameraPos[1] > -0.1f && !has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+				cameraPos = nextCameraPos;
+				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+			}
 		}
 		else{
 			glm::vec3 translation_change = glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
 			nextCameraPos += translation_change;
-		}
 
-		Camera nextCamera(
-			nextCameraPos,
-			scene_camera.getCameraFront(),
-			scene_camera.getCameraUp(),
-			scene_camera.getYaw(),
-			scene_camera.getPitch(),
-			scene_camera.getRadius()
-			);
-		
-		if (out_of_bounds(scene_map, nextCamera)){
-			//do nothing
-		}
 
-		//check if there's a collision
-		else if (!has_collided(nextCamera, scene_cube_objects)){
-
-			glm::vec3 delta(0, 0.1f, 0);
-			glm::vec3 bottom_cam = nextCamera.getCameraPosition() - delta;
-			nextCamera.setCameraPosition(bottom_cam);
-
-			//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
-
-			//Check if the camera is on a solid surface
-			if (!has_collided(nextCamera, scene_cube_objects)){
-
-				//Camera is not on a solid surface
-				cameraPos = nextCameraPos - delta;
-				//update the camera position if it there are no collisions
-				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+			if (out_of_bounds(scene_map, nextCameraPos)){
+				//do nothing
 			}
-			else{
-				cameraPos = nextCameraPos;
+
+			//check if there's a collision
+			else if (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+
+				glm::vec3 delta(0.0f, 0.1f, 0.0f);
+
+				if (nextCameraPos[1] >= 0.1f && nextCameraPos[1] <= 0.2f)
+					nextCameraPos = glm::vec3(nextCameraPos[0], 0, nextCameraPos[2]);
+				else
+					nextCameraPos = nextCameraPos - delta;
+
+				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
+				//Check if the camera is on a solid surface
+				if (nextCameraPos[1] > -0.2f){
+					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+						if (nextCameraPos[1] == -0.1f){
+							break;
+						}
+						nextCameraPos[1] -= 0.1f;
+					}
+					//Camera is not on a solid surface
+					cameraPos = nextCameraPos + delta;
+					//update the camera position if it there are no collisions
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+
+				}
+
+				else{
+					cameraPos = nextCameraPos + delta;
+					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+				}
 			}
 		}
 	}
-	if (keys[GLFW_KEY_C]){
+	else if (keys[GLFW_KEY_C]){
 		if (!freeRoam){
 			freeRoam = true;
 			previous_cam_position = cameraPos;
@@ -1758,101 +1833,6 @@ void character_movement(Scene scene_map, Camera scene_camera, float size_cube){
 void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mods) {
 	
 	switch (key){	
-	/* Previous placement of the space key callback
-		//Jumping effect
-	case GLFW_KEY_SPACE:
-		//Cannot jump in free roam
-		if (!freeRoam && !jumped){			
-			if (action == GLFW_PRESS){	
-
-				glm::vec3 nextCameraPos = cameraPos;
-				glm::vec3 translation_change = glm::vec3(0, 0.1f, 0);
-				nextCameraPos += translation_change;
-				
-				Camera nextCamera(
-					nextCameraPos,
-					scene_camera.getCameraFront(),
-					scene_camera.getCameraUp(),
-					scene_camera.getYaw(),
-					scene_camera.getPitch(),
-					scene_camera.getRadius()
-					);
-
-				if (out_of_bounds(scene_map, nextCamera)){
-					//do nothing
-				}
-
-				else if (!has_collided(nextCamera, scene_cube_objects)){
-					//cout << "A did not hit" << endl;
-					cameraPos = nextCameraPos;
-					scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
-					jumped = true;
-				}				
-
-				//Previous method to simulate a jump
-				//model_matrix = glm::translate(model_matrix, glm::vec3(0, -0.1f, 0));				
-			}
-		}
-		else if (!freeRoam && jumped){
-
-			glm::vec3 nextCameraPos = cameraPos;
-			glm::vec3 translation_change = glm::vec3(0, 0.1f, 0);
-			nextCameraPos -= translation_change;
-
-			Camera nextCamera(
-				nextCameraPos,
-				scene_camera.getCameraFront(),
-				scene_camera.getCameraUp(),
-				scene_camera.getYaw(),
-				scene_camera.getPitch(),
-				scene_camera.getRadius()
-				);
-
-			if (out_of_bounds(scene_map, nextCamera)){
-				//do nothing
-			}
-
-			else if (has_collided(nextCamera, scene_cube_objects)){
-				//do nothing, keep camera here
-
-				//cameraPos = nextCameraPos;
-				//scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
-				
-			}
-			else{
-				//Decrease position by 1 block size
-				nextCamera.setCameraPosition(nextCamera.getCameraPosition() - translation_change);
-
-				//While we do not reach a solid cube
-				while (!has_collided(nextCamera, scene_cube_objects)){
-					//Decrease next cam position by 1 block size until we hit a solid cube
-					nextCamera.setCameraPosition(nextCamera.getCameraPosition() - translation_change);
-				}
-				//Increase position of the actual camera by 1 block size
-				cameraPos = nextCamera.getCameraPosition() + translation_change;
-
-				//Update camera
-				scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
-			}
-
-			jumped = false;
-
-			//model_matrix = glm::translate(model_matrix, glm::vec3(0, 0.1f, 0));
-		}	
-		break;
-		*/
-	case GLFW_KEY_P:
-		if (action == GLFW_PRESS){
-			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); //DRAWING MY FIGURE AS POINTS
-		}
-		break;
-
-	case GLFW_KEY_T:
-		if (action == GLFW_PRESS){
-			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); //DRAWING MY FIGURE AS POINTS
-		}
-		break;
-
 	case GLFW_KEY_ESCAPE:
 		if (action == GLFW_PRESS){		
 			if (cursor_hidden == true){
@@ -1873,8 +1853,6 @@ void key_callback(GLFWwindow *_window, int key, int scancode, int action, int mo
 			keys[key] = false;
 		break;
 	}
-
-
 }
 
 //HANDLE CURSOR POSITION TO KNOW IF IT SHOULD ZOOM IN OR ZOOM OUT
