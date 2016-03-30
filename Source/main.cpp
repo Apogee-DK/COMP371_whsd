@@ -303,7 +303,7 @@ bool initialize() {
 	glDepthFunc(GL_LESS);	/// The type of testing i.e. a smaller value as "closer"
 
 	//INITIALIZING THE PROJECTION MATRIX
-	proj_matrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.01f, 100.0f); //0.1 units <-> 100 units, clipping
+	proj_matrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.05f, 75.0f); //0.1 units <-> 100 units, clipping
 
 	return true;
 }
@@ -1018,12 +1018,16 @@ void generateHillsToScene(vector<GLfloat>* obj_coordinates, glm::vec3 location_g
 		//Random the height, width and length of the hill
 		int height_hill = rand() % 10 + 5;
 		int width_hill = rand() % 20 + 7;
-		int length_hill = rand() % 20 + 8;
-		
-		float pos_x = (int)(rand() % (length_Map - length_hill) + 1) / 10.0f;
-		float pos_z = (int)(rand() % (width_Map - width_hill) + 1) / 10.0f; 
+		int length_hill = rand() % 20 + 8;		
+		float pos_x = (int)(rand() % (length_Map - length_hill - 2) + 1) / 10.0f;
+		float pos_z = (int)(rand() % (width_Map - width_hill - 2) + 1) / 10.0f; 
 
-		while (checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), height_hill, width_hill + 2, length_hill + 2, sizeOfCube)){
+		while (pos_x + location_ground[0] + length_hill*sizeOfCube > length_Map*sizeOfCube || pos_z + location_ground[2] + width_hill*sizeOfCube > width_Map*sizeOfCube){
+			pos_x = (int)(rand() % (length_Map - length_hill - 2) + 1) / 10.0f;
+			pos_z = (int)(rand() % (width_Map - width_hill - 2) + 1) / 10.0f;
+		}
+
+		while (checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), height_hill, width_hill+2, length_hill+2, sizeOfCube)){
 			//The section in which the house is being placed is not free
 			//Random the x and z coordinate again			
 			pos_x = (int)(rand() % (length_Map - length_hill) + 1) / 10.0f; //(length_Map * sizeOfCube);
@@ -1250,11 +1254,11 @@ int main() {
 
 	//Setting up the map dimensions
 	float size_cube = 0.1f;
-	int length_map = 300;
-	int width_map = 300;
-	int numOfTrees = 200;
-	int numOfHouses = 50;
-	int numOfHills = 10;
+	int length_map = 100;
+	int width_map = 100;
+	int numOfTrees = 18;
+	int numOfHouses = 3;
+	int numOfHills = 2;
 	
 	//Setting the world environment
 	scene_map.setSceneWidth(length_map);
@@ -1486,7 +1490,7 @@ bool checkCollision(glm::vec3 scene_camera_position, double radius, Cube cube) /
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
-bool has_collided(Scene scene_map, glm::vec3 scene_camera_position, double radius, vector<Cube> scene_cubes, bool all_objects){
+bool has_collided(Scene scene_map, glm::vec3 scene_camera_position, double radius, vector<Cube> scene_cubes, bool _all){
 
 	int w = scene_map.getSceneWidth();
 	int l = scene_map.getSceneLength();
@@ -1508,7 +1512,7 @@ bool has_collided(Scene scene_map, glm::vec3 scene_camera_position, double radiu
 void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double radius, float size_cube){
 
 	//Smooth out the camera movement --> avoid lag 
-	GLfloat cameraSpeed = 1.0 * deltaTime;	
+	GLfloat cameraSpeed = 2.0 * deltaTime;
 	//Temporary value to store the current camera position
 	glm::vec3 nextCameraPos = cameraPos;
 
@@ -1538,7 +1542,7 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 				nextCameraPos += translation_change;
 				cameraPos = nextCameraPos;
 				jumped = false;
-			}			
+			}
 		}
 	}
 	else if (!keys[GLFW_KEY_SPACE] && !freeRoam && jumped){
@@ -1546,28 +1550,27 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 		glm::vec3 nextCameraPos = cameraPos;
 		glm::vec3 translation_change = glm::vec3(0.0f, 0.1f, 0.0f);
 		nextCameraPos -= translation_change;
-		
+
 		if (out_of_bounds(scene_map, nextCameraPos) || has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
-			cameraPos += translation_change;
+		cameraPos += translation_change;
 		}
 		else{
-			//Decrease position by 1 block size
-			nextCameraPos -= translation_change;
+		//Decrease position by 1 block size
+		nextCameraPos -= translation_change;
+		if (nextCameraPos[1] >= -0.1f){
+		//While we do not reach a solid cube
+		while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
+		//Decrease next cam position by 1 block size until we hit a solid cube
+		if (nextCameraPos[1] == -0.1f){
+		break;
+		}
+		nextCameraPos -= translation_change;
+		}
+		}
 
-			if (nextCameraPos[1] >= -0.1f){
-				//While we do not reach a solid cube
-				while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
-					//Decrease next cam position by 1 block size until we hit a solid cube
-					if (nextCameraPos[1] == -0.1f){
-						break;
-					}
-					nextCameraPos -= translation_change;
-				}
-			}
-			
-			cameraPos = nextCameraPos + translation_change;
-			//Update camera
-			scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
+		cameraPos = nextCameraPos + translation_change;
+		//Update camera
+		scene_camera.update(cameraPos, cameraFront, cameraUp, yaw, pitch);
 		}
 		*/
 
@@ -1618,7 +1621,7 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-				if (nextCameraPos[1] > -0.2f){
+				if (nextCameraPos[1] > -0.1f){
 					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
 						if (nextCameraPos[1] == -0.1f){
 							break;
@@ -1638,7 +1641,7 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 				}
 			}
 		}
-	}		
+	}
 
 	else if (keys[GLFW_KEY_S]){
 		if (freeRoam){
@@ -1677,7 +1680,7 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-				if (nextCameraPos[1] > -0.2f){
+				if (nextCameraPos[1] > -0.1f){
 					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
 						if (nextCameraPos[1] == -0.1f){
 							break;
@@ -1734,7 +1737,7 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-				if (nextCameraPos[1] > -0.2f){
+				if (nextCameraPos[1] > -0.1f){
 					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
 						if (nextCameraPos[1] == -0.1f){
 							break;
@@ -1792,7 +1795,7 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-				if (nextCameraPos[1] > -0.2f){
+				if (nextCameraPos[1] > -0.1f){
 					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
 						if (nextCameraPos[1] == -0.1f){
 							break;
@@ -1824,7 +1827,6 @@ void character_movement(Scene scene_map, glm::vec3 scene_camera_position, double
 		}
 	}
 }
-
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //INPUT HANDLING
 //--------------------------------------------------------------------------------------------------------------------------------------------
