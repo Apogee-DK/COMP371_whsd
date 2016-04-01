@@ -344,11 +344,8 @@ bool initialize() {
 
 	//INITIALIZING THE PROJECTION MATRIX
 	proj_matrix = glm::perspective(45.0f, 4.0f / 3.0f, 0.05f, 75.0f); //0.1 units <-> 100 units, clipping
-<<<<<<< HEAD
 
 	glEnable(GL_CULL_FACE);
-=======
->>>>>>> origin/models_minecraft
 
 	return true;
 }
@@ -1079,13 +1076,9 @@ void generateHillsToScene(vector<GLfloat>* obj_coordinates, vector<Cube>*** map_
 			pos_z = (int)(rand() % (width_Map - width_hill - 2) + 1) / 10.0f;
 		}
 
-<<<<<<< HEAD
 		int count = 0;
 
 		while (count < 100 && checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), height_hill, width_hill+2, length_hill+2, sizeOfCube)){
-=======
-		while (checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), height_hill, width_hill+2, length_hill+2, sizeOfCube)){
->>>>>>> origin/models_minecraft
 			//The section in which the house is being placed is not free
 			//Random the x and z coordinate again			
 			pos_x = (int)(rand() % (length_Map - length_hill) + 1) / 10.0f; //(length_Map * sizeOfCube);
@@ -1322,19 +1315,11 @@ int main() {
 
 	//Setting up the map dimensions
 	float size_cube = 0.1f;
-<<<<<<< HEAD
 	int length_map = 1000;
 	int width_map = 1000;
 	int numOfTrees = 2000;
 	int numOfHouses = 500;
 	int numOfHills = 100;
-=======
-	int length_map = 100;
-	int width_map = 100;
-	int numOfTrees = 18;
-	int numOfHouses = 3;
-	int numOfHills = 2;
->>>>>>> origin/models_minecraft
 	
 	Camera scene_camera;
 	Scene scene_map(scene_camera, length_map, width_map, size_cube);	
@@ -1590,10 +1575,6 @@ bool checkCollision(glm::vec3 scene_camera_position, double radius, Cube cube) /
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
-<<<<<<< HEAD
-=======
-bool has_collided(Scene scene_map, glm::vec3 scene_camera_position, double radius, vector<Cube> scene_cubes, bool _all){
->>>>>>> origin/models_minecraft
 
 //Instead of vector<Cube> scene_cubes --> Use the map_section to find the cube
 //Since we have the camera_position, we can determine which section we are in...
@@ -1730,15 +1711,9 @@ void character_movement(Scene& scene_map, vector<Cube>*** map_section, double ra
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-<<<<<<< HEAD
 				if (nextCameraPos[1] > -size_cube){
 					while (!has_collided(scene_map, map_section, nextCameraPos, radius)){
 						if (nextCameraPos[1] == -size_cube){
-=======
-				if (nextCameraPos[1] > -0.1f){
-					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
-						if (nextCameraPos[1] == -0.1f){
->>>>>>> origin/models_minecraft
 							break;
 						}
 						nextCameraPos[1] -= size_cube;
@@ -1795,15 +1770,9 @@ void character_movement(Scene& scene_map, vector<Cube>*** map_section, double ra
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-<<<<<<< HEAD
 				if (nextCameraPos[1] > -size_cube){
 					while (!has_collided(scene_map, map_section, nextCameraPos, radius)){
 						if (nextCameraPos[1] == -size_cube){
-=======
-				if (nextCameraPos[1] > -0.1f){
-					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
-						if (nextCameraPos[1] == -0.1f){
->>>>>>> origin/models_minecraft
 							break;
 						}
 						nextCameraPos[1] -= size_cube;
@@ -1858,15 +1827,9 @@ void character_movement(Scene& scene_map, vector<Cube>*** map_section, double ra
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-<<<<<<< HEAD
 				if (nextCameraPos[1] > -size_cube){
 					while (!has_collided(scene_map, map_section, nextCameraPos, radius)){
 						if (nextCameraPos[1] == -size_cube){
-=======
-				if (nextCameraPos[1] > -0.1f){
-					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
-						if (nextCameraPos[1] == -0.1f){
->>>>>>> origin/models_minecraft
 							break;
 						}
 						nextCameraPos[1] -= size_cube;
@@ -1922,15 +1885,9 @@ void character_movement(Scene& scene_map, vector<Cube>*** map_section, double ra
 
 				//MUST INCLUDE CONDITION WHERE I CAN KNOW IF I AM HOVERING
 				//Check if the camera is on a solid surface
-<<<<<<< HEAD
 				if (nextCameraPos[1] > -size_cube){
 					while (!has_collided(scene_map, map_section, nextCameraPos, radius)){
 						if (nextCameraPos[1] == -size_cube){
-=======
-				if (nextCameraPos[1] > -0.1f){
-					while (!has_collided(scene_map, nextCameraPos, radius, scene_cube_objects, false)){
-						if (nextCameraPos[1] == -0.1f){
->>>>>>> origin/models_minecraft
 							break;
 						}
 						nextCameraPos[1] -= size_cube;
@@ -1960,6 +1917,7 @@ void character_movement(Scene& scene_map, vector<Cube>*** map_section, double ra
 		}
 	}
 }
+
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //INPUT HANDLING
 //--------------------------------------------------------------------------------------------------------------------------------------------
