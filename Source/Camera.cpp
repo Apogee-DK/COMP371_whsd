@@ -61,13 +61,9 @@ double Camera::getRadius(){
 	return radius;
 }
 
-void Camera::update(glm::vec3 cam_pos, glm::vec3 cam_front, glm::vec3 cam_up, GLfloat y, GLfloat p){
-
-	cameraPos = cam_pos;
+void Camera::update(glm::vec3 cam_front, GLfloat y, GLfloat p){
 
 	cameraFront = cam_front;
-	
-	cameraUp = cam_up;
 	
 	yaw = y;
 	

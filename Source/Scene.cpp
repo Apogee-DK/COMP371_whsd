@@ -8,11 +8,11 @@ Scene::Scene(){
 }
 
 //Set the size of map and the size of the cubes
-Scene::Scene(int l, int w, float s) 
-	: length_map(l), width_map(w), size_cube(s) {
+Scene::Scene(Camera c, int l, int w, float s) 
+	: scene_camera(c), length_map(l), width_map(w), size_cube(s) {
 
 	max_x = l*s + min_x;
-	max_y = max(l*s, w*s) + min_y;
+	max_y = max(l*s/2, w*s/2) + min_y;
 	min_z = -1*w*s + max_z; //negative number
 
 }
@@ -55,6 +55,13 @@ void Scene::setNumberOfHills(int n){
 	numOfHills = n;
 }
 
+void Scene::setSceneCamera(Camera c){
+	scene_camera = c;
+}
+
+void Scene::setPreviousCameraPosition(glm::vec3 v){
+	previous_camera_position = v;
+}
 
 glm::vec3 Scene::getMinBoundaryMap(){
 	return glm::vec3(min_x, min_y, max_z);
@@ -62,4 +69,20 @@ glm::vec3 Scene::getMinBoundaryMap(){
 
 glm::vec3 Scene::getMaxBoundaryMap(){
 	return glm::vec3(max_x, max_y, min_z);
+}
+
+int Scene::getSceneWidth(){
+	return width_map;
+}
+
+int Scene::getSceneLength(){
+	return length_map;
+}
+
+Camera& Scene::getSceneCamera(){
+	return scene_camera;
+}
+
+glm::vec3 Scene::getPreviousSceneCameraPosition(){
+	return previous_camera_position;
 }

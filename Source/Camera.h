@@ -36,6 +36,6 @@ public:
 	GLfloat getYaw();
 	GLfloat getPitch();
 
-	void update(glm::vec3, glm::vec3, glm::vec3, GLfloat, GLfloat);
+	void update(glm::vec3, GLfloat, GLfloat);
 };
 #endif
