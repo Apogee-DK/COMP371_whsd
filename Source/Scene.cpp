@@ -8,8 +8,8 @@ Scene::Scene(){
 }
 
 //Set the size of map and the size of the cubes
-Scene::Scene(Camera c, int l, int w, float s) 
-	: scene_camera(c), length_map(l), width_map(w), size_cube(s) {
+Scene::Scene(Camera c, Character ch, int l, int w, float s) 
+	: scene_camera(c), scene_character(ch), length_map(l), width_map(w), size_cube(s) {
 
 	max_x = l*s + min_x;
 	max_y = max(l*s/2, w*s/2) + min_y;
@@ -81,6 +81,10 @@ int Scene::getSceneLength(){
 
 Camera& Scene::getSceneCamera(){
 	return scene_camera;
+}
+
+Character& Scene::getSceneCharacter(){
+	return scene_character;
 }
 
 glm::vec3 Scene::getPreviousSceneCameraPosition(){

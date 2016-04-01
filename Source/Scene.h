@@ -4,8 +4,7 @@
 #include "glm.hpp"
 #include "glfw3.h" 
 #include "Camera.h"
-#include <unordered_map>
-#include <iostream>
+#include "Character.h"
 using namespace std;
 
 class Scene{
@@ -13,6 +12,7 @@ private:
 	//Setting up the map dimensions
 	
 	Camera scene_camera;
+	Character scene_character;
 	glm::vec3 previous_camera_position;
 
 	int length_map;
@@ -37,7 +37,7 @@ public:
 	Scene();
 
 	//Set the size of map and the size of the cubes
-	Scene(Camera, int, int, float);
+	Scene(Camera, Character, int, int, float);
 
 	void update();
 
@@ -67,6 +67,8 @@ public:
 	int getSceneLength();
 
 	Camera& getSceneCamera();
+
+	Character& getSceneCharacter();
 
 	glm::vec3 Scene::getPreviousSceneCameraPosition();
 
