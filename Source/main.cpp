@@ -1646,6 +1646,7 @@ int main() {
 		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(model_matrix));
 
 		glBindVertexArray(obj_VAO);
+<<<<<<< HEAD
 
 		glBindBuffer(GL_ARRAY_BUFFER, water_VBO);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
@@ -1658,6 +1659,10 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, water_coordinates.size());
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+=======
+		
+		//Drawing the ground
+>>>>>>> origin/models_minecraft
 		glBindBuffer(GL_ARRAY_BUFFER, ground_VBO);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
 		glEnableVertexAttribArray(0);
@@ -1669,6 +1674,7 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, ground_coordinates.size());
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+		//Drawing the hills
 		glBindBuffer(GL_ARRAY_BUFFER, hill_VBO);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
 		glEnableVertexAttribArray(0);
@@ -1680,6 +1686,8 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, hill_coordinates.size());
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+
+		//Drawing the house
 		glBindBuffer(GL_ARRAY_BUFFER, house_VBO);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
 		glEnableVertexAttribArray(0);
