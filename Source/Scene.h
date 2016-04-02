@@ -5,6 +5,7 @@
 #include "glfw3.h" 
 #include "Camera.h"
 #include "Character.h"
+#include "Cursor.h"
 using namespace std;
 
 class Scene{
@@ -13,6 +14,7 @@ private:
 	
 	Camera scene_camera;
 	Character scene_character;
+	Cursor scene_cursor;
 	glm::vec3 previous_camera_position;
 
 	int length_map;
@@ -37,7 +39,7 @@ public:
 	Scene();
 
 	//Set the size of map and the size of the cubes
-	Scene(Camera, Character, int, int, float);
+	Scene(Camera, Character, Cursor, int, int, float);
 
 	void update();
 
@@ -69,6 +71,8 @@ public:
 	Camera& getSceneCamera();
 
 	Character& getSceneCharacter();
+
+	Cursor& getSceneCursor();
 
 	glm::vec3 Scene::getPreviousSceneCameraPosition();
 

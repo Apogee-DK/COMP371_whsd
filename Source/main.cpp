@@ -50,9 +50,9 @@ Use light ray and shadow ray to determine if the object will be lit
 
 */
 
-#include "glew.h"		// include GL Extension Wrangler
-#include "glfw3.h"       // include GLFW helper library
-#include "SOIL.h"
+#include <glew.h>		// include GL Extension Wrangler
+#include <glfw3.h>       // include GLFW helper library
+#include <SOIL.h>
 
 #include "glm.hpp"
 #include "gtc/matrix_transform.hpp"
@@ -189,31 +189,23 @@ GLuint proj_matrix_id = 0;
 ///Transformations
 glm::mat4 proj_matrix;
 glm::mat4 view_matrix;
-glm::mat4 character_view_matrix;
 glm::mat4 model_matrix;
+glm::mat4 character_view_matrix;
 glm::mat4 character_model_matrix;
+glm::mat4 cursor_model_matrix;
 
-GLuint VBO, char_VBO, VAO, char_VAO, EBO, char_EBO;
+GLuint obj_VBO, char_VBO, cursor_VBO, obj_VAO, char_VAO, cursor_VAO;
 GLuint skyboxVAO, skyboxVBO;
 GLfloat point_size = 3.0f;
 
-//for the coordinates of objects in our scene
-vector<GLfloat> g_vertex_buffer_data;
-
-//for the ebo, in order to draw the shap
-vector<GLuint> obj_indicesOfPoints;
+//for the points on a square in order to draw the cube
+vector<GLfloat> obj_coordinates;
 
 //for the points on a square in order to draw the cube
-vector<GLfloat>* obj_coordinates = new vector<GLfloat>();
-
-//for the coordinates of character
-vector<GLfloat> character_vertex_buffer_data;
-
-//for the ebo, in order to draw the character
-vector<GLuint> character_indicesOfPoints;
+vector<GLfloat> character_coordinates;
 
 //for the points on a square in order to draw the cube
-vector<GLfloat>* character_coordinates = new vector<GLfloat>();
+vector<GLfloat> cursor_coordinates;
 
 //for the Camera
 bool freeRoam = false;
@@ -221,6 +213,7 @@ bool jumped = false;
 
 //Certain camera properties that must be global
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 previousCameraFront = glm::vec3(0.0f, 0.0f, -0.1f);
 GLfloat yaw = -90.0f;	// Magnitude of how much we're looking to the left or to the right
 GLfloat pitch = 0.0f;	// How much we are looking up or down
 
@@ -358,9 +351,13 @@ bool initialize() {
 bool cleanUp() {
 	glDisableVertexAttribArray(0);
 	//Properly de-allocate all resources once they've outlived their purpose
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	glDeleteBuffers(1, &EBO);
+	glDeleteVertexArrays(1, &obj_VAO);
+	glDeleteVertexArrays(1, &char_VAO);
+	glDeleteVertexArrays(1, &cursor_VAO);
+
+	glDeleteBuffers(1, &obj_VBO);
+	glDeleteBuffers(1, &char_VBO);
+	glDeleteBuffers(1, &cursor_VBO);
 
 	// Close GL context and any other GLFW resources
 	glfwTerminate();
@@ -440,10 +437,10 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 	glAttachShader(ProgramID, VertexShaderID);
 	glAttachShader(ProgramID, FragmentShaderID);
 
-	glBindAttribLocation(ProgramID, 0, "in_Position");
+	glBindAttribLocation(ProgramID, 0, "Position");
 
 	//appearing in the vertex shader.
-	glBindAttribLocation(ProgramID, 1, "in_Color");
+	glBindAttribLocation(ProgramID, 1, "texCoords");
 
 	glLinkProgram(ProgramID);
 
@@ -503,6 +500,28 @@ GLuint loadCubemap(vector<const GLchar*> faces)
 	return textureID;
 }
 
+GLuint loadTexture(GLchar* path)
+{
+	//Generate texture ID and load texture data 
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+	int width, height;
+	unsigned char* image = SOIL_load_image(path, &width, &height, 0, SOIL_LOAD_RGB);
+	// Assign texture to ID
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	// Parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	SOIL_free_image_data(image);
+	return textureID;
+}
+
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATING CUBES
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -511,171 +530,6 @@ GLuint loadCubemap(vector<const GLchar*> faces)
 //dir_translation is the direction of translation
 //bufferData IS THE VECTOR THAT HOLDS THE RESULTING TRANSLATION USING coordinate & dir_translation
 //obj_indicesOfPoints IS THE MATRIX OF obj_indicesOfPoints, EACH POINT HAS AN INDEX
-void translationSweepMatrix(vector<GLfloat> dir_trans, vector<GLfloat>* obj_coord, vector<GLfloat> *bufferData, vector<GLuint> *obj_indicesOfPoints) {
-
-	//FOR EACH POINT IN THE SECOND VECTOR, ADD THE FIRST VECTOR TO IT --> x1, y1, y1 + x2, y2, z2 --> New point --> STORE NEW POINT IN bufferData
-	for (int i = 0; i < obj_coord->size() / 3; i++) {
-		for (int j = 0; j < dir_trans.size(); j++) {
-			bufferData->push_back(dir_trans[j] + (*obj_coord)[(i * 3 + j % 3)]); //8 points for the cube
-		}
-	}
-
-	//Relation between type cube
-	//For the first 4 points to make the cube, we added the type
-	//--------------------------------------------------------------------------------------------------------------------------------------------
-	//ADD COLOR/TEXTURE HERE
-	//--------------------------------------------------------------------------------------------------------------------------------------------
-
-	//Every shape will be associated with a color, add the color "coordinate" to the inputPoints
-	/*
-
-	Steps for reading coordinates
-
-	For the first cube
-	-------------------------------------------------------
-	typeOfObjects <-- water (index 0)
-
-	0 0 0 
-	0 1 0	Coordinates will go into bufferData (our VBO) ---> translate all these points to create the cube --> insert translated points into VBO (in total you would get 8 points (8 (x, y, z) coordinates)
-	0 0 1
-	1 0 0
-	-------------------------------------------------------
-
-	This is our first square which will be transformed into a cube
-	The same process will happen for all other cubes...
-
-	typeOfObjects (index 1) <-- ground (index 1)
-
-	What we should do is...
-
-	Loop through the coordinates in the buffer data to determine and set the texture of the cubes 
-	
-	--> index(0) was water --> the first 8 coordinates will be used to create the water texture
-
-	func(....){
-
-	//Adding 8 to i each time to get to the other cube
-	for(int i = 0; i < bufferData.size(); i += 8){
-		
-		//8 * 3 
-		
-		//Face 1
-
-		//Find the points that make up the face
-		bufferData[i] --> do your thing;
-		bufferData[i + something] --> do your thing;
-		bufferData[i + ...] --> do your thing;
-		bufferData[i + ...] --> do your thing;
-
-		set your image
-
-		//Face 2
-
-
-		//Face 3
-
-
-
-		//Face 4
-
-		...
-
-		//Face 6
-
-		...
-
-	}
-
-	--> index(1) was ground --> the next 8 coordinates will be used to create the water texture (by calling the func(...))
-
-
-	The pattern should be: 
-	*/
-
-
-	//Setting up each cube
-	//Starting at i = 1 because i = 0 is the type of cube
-	for (int i = 0; i < bufferData->size() / 3; i += 8) {
-
-		//0 1 3
-		obj_indicesOfPoints->push_back(i);
-		obj_indicesOfPoints->push_back(i + 1);
-		obj_indicesOfPoints->push_back(i + 3);
-
-		//0 3 2
-		obj_indicesOfPoints->push_back(i);
-		obj_indicesOfPoints->push_back(i + 3);
-		obj_indicesOfPoints->push_back(i + 2);
-
-
-		//2 3 7
-		obj_indicesOfPoints->push_back(i + 2);
-		obj_indicesOfPoints->push_back(i + 3);
-		obj_indicesOfPoints->push_back(i + 7);
-
-		//2 7 6
-		obj_indicesOfPoints->push_back(i + 2);
-		obj_indicesOfPoints->push_back(i + 7);
-		obj_indicesOfPoints->push_back(i + 6);
-
-
-		//6 7 5
-		obj_indicesOfPoints->push_back(i + 6);
-		obj_indicesOfPoints->push_back(i + 7);
-		obj_indicesOfPoints->push_back(i + 5);
-
-
-		//6 5 4
-		obj_indicesOfPoints->push_back(i + 6);
-		obj_indicesOfPoints->push_back(i + 5);
-		obj_indicesOfPoints->push_back(i + 4);
-
-		//4 5 1
-		obj_indicesOfPoints->push_back(i + 4);
-		obj_indicesOfPoints->push_back(i + 5);
-		obj_indicesOfPoints->push_back(i + 1);
-
-		//4 1 0
-		obj_indicesOfPoints->push_back(i + 4);
-		obj_indicesOfPoints->push_back(i + 1);
-		obj_indicesOfPoints->push_back(i);
-
-		//0 2 4
-		obj_indicesOfPoints->push_back(i);
-		obj_indicesOfPoints->push_back(i + 2);
-		obj_indicesOfPoints->push_back(i + 4);
-
-		//4 0 2
-		obj_indicesOfPoints->push_back(i + 4);
-		obj_indicesOfPoints->push_back(i + 0);
-		obj_indicesOfPoints->push_back(i + 2);
-
-		//4 2 6
-		obj_indicesOfPoints->push_back(i + 4);
-		obj_indicesOfPoints->push_back(i + 2);
-		obj_indicesOfPoints->push_back(i + 6);
-
-		//4 2 6
-		obj_indicesOfPoints->push_back(i + 4);
-		obj_indicesOfPoints->push_back(i + 2);
-		obj_indicesOfPoints->push_back(i + 6);
-
-		//1 5 7
-		obj_indicesOfPoints->push_back(i + 1);
-		obj_indicesOfPoints->push_back(i + 5);
-		obj_indicesOfPoints->push_back(i + 7);
-
-		//1 7 3
-		obj_indicesOfPoints->push_back(i + 1);
-		obj_indicesOfPoints->push_back(i + 7);
-		obj_indicesOfPoints->push_back(i + 3);
-	}
-}
-
-//Set the translating vector
-void setTranslationDirection(float sizeOfCube){
-	dir_translation[4] = sizeOfCube;
-}
 
 //create a square
 //Parameter x, y, z is the starting coordinate of the square
@@ -698,24 +552,290 @@ void createSceneCube(vector<GLfloat>* obj_coordinates, vector<Cube>*** map_secti
 	if (type == -1)
 		(*map_of_coordinates)[coordinatetoint(x, y, z)] = type;
 
-	setTranslationDirection(sizeOfCube); //Depending on the size of the cube, we will need to change the translating vector
-
 	//Store the points in obj_coordinates which will be used to create cubes
+	//front face
+	//  3.  2.
+	//  0.  1.
+
+	//Front face - 1st triangle
+	//0
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//2
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//3
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//Front face - 2nd triangle
+	//0
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//1
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//2
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+
+	//back face
+	//  7.  6.
+	//  4.  5.
+
+	//back face - 1st triangle
+	//4
 	obj_coordinates->push_back(x + sizeOfCube / 2);
 	obj_coordinates->push_back(y - sizeOfCube / 2);
 	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//6
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//7
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//back face - 2nd triangle
+	//4
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//5
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//6
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//right side face
+	//  2.  7.
+	//  1.  4.
+
+	//right side face - 1st triangle
+	//1
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//7
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//2
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//back face - 2nd triangle
+	//1
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//4
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//7
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
 	
-	obj_coordinates->push_back(x + sizeOfCube / 2);
-	obj_coordinates->push_back(y - sizeOfCube / 2);
-	obj_coordinates->push_back(z + sizeOfCube / 2);
+	//left side face
+	//  6.  3.
+	//  5.  0.
 
+	//5
 	obj_coordinates->push_back(x - sizeOfCube / 2);
 	obj_coordinates->push_back(y - sizeOfCube / 2);
 	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
 
+	//3
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//6
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//5
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//0
 	obj_coordinates->push_back(x - sizeOfCube / 2);
 	obj_coordinates->push_back(y - sizeOfCube / 2);
 	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//3
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+
+	//top face
+	//  6.  7.
+	//  3.  2.
+
+	//3
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//7
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//6
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//3
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//2
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//7
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y + sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//bottom face
+	//  0.  1.
+	//  5.  4.
+	
+	//5
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//1
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//0
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(1.0f);
+
+	//5
+	obj_coordinates->push_back(x - sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(0.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//4
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z - sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(0.0f);
+
+	//1
+	obj_coordinates->push_back(x + sizeOfCube / 2);
+	obj_coordinates->push_back(y - sizeOfCube / 2);
+	obj_coordinates->push_back(z + sizeOfCube / 2);
+	obj_coordinates->push_back(1.0f);
+	obj_coordinates->push_back(1.0f);
 
 }
 
@@ -821,19 +941,11 @@ void createHill(vector<GLfloat>* obj_coordinates, vector<Cube>*** map_section, g
 			break;
 		}
 
-		if (h == 0){
-			//Setting the base area which is taken up by the hill
-			for (int w1 = 0; w1 < width_hill + 2; w1++){
-				for (int l1 = 0; l1 < length_hill + 2; l1++){
-					(*map_of_coordinates)[coordinatetoint(coordinate[0] + l1*sizeOfCube, coordinate[1], coordinate[2] - w1*sizeOfCube)] = type;
-				}
-			}
-		}
-
 		//Assign the position of the cubes
 		for (int w = 0; w < width_hill; w++){
 			for (int l = 0; l < length_hill; l++){
 				createSceneCube(obj_coordinates, map_section, coordinate[0] + l*sizeOfCube, coordinate[1] + h*sizeOfCube, coordinate[2] - w*sizeOfCube, sizeOfCube, type);
+				(*map_of_coordinates)[coordinatetoint(coordinate[0] + l*sizeOfCube, coordinate[1] + h*sizeOfCube, coordinate[2] - w*sizeOfCube)] = type;
 			}
 		}
 
@@ -1028,6 +1140,24 @@ void createCharacter(vector<GLfloat>* character_coordinates, vector<Cube>*** map
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
+//CREATE CURSOR
+//--------------------------------------------------------------------------------------------------------------------------------------------
+
+void createCursor(vector<GLfloat>* cursor_coordinates, vector<Cube>*** map_section, Camera scene_camera, float sizeOfCube){
+
+	glm::vec3 camera_position = scene_camera.getCameraPosition(); //Starting location of our sprite
+
+	int type = 0;
+
+	//map_of_coordinates[to_string((*character_coordinates)[0]) + to_string((*character_coordinates)[1]) + to_string((*character_coordinates)[2])] = type;
+
+	//Create the hand
+	createSceneCube(cursor_coordinates, map_section, camera_position[0] - sizeOfCube, camera_position[1] - sizeOfCube, camera_position[2] + sizeOfCube, sizeOfCube, type);
+	
+}
+
+
+//--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATE MAP
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1206,27 +1336,30 @@ void createMap(Camera scene_camera, glm::vec3 location_ground, vector<Cube>*** m
 	//The coordinates, width_obj and length_obj will be random
 
 	//bool _hasWater = rand() % 2;
-	createGround(obj_coordinates, map_section, location_ground, width_Map, length_Map, sizeOfCube, false);
+	createGround(&obj_coordinates, map_section, location_ground, width_Map, length_Map, sizeOfCube, false);
 
 	//Create the character and set the camera to its position
-	createCharacter(character_coordinates, map_section, scene_camera, sizeOfCube);
-	translationSweepMatrix(dir_translation, character_coordinates, &character_vertex_buffer_data, &character_indicesOfPoints);
+	createCharacter(&character_coordinates, map_section, scene_camera, sizeOfCube);
+	//translationSweepMatrix(dir_translation, character_coordinates, &character_vertex_buffer_data, &character_indicesOfPoints);
 	
+	createCursor(&cursor_coordinates, map_section, scene_camera, sizeOfCube);
+	//translationSweepMatrix(dir_translation, cursor_coordinates, &cursor_vertex_buffer_data, &cursor_indicesOfPoints);
+
 	//Generate a certain number of hills in a scene
-	generateHillsToScene(obj_coordinates, map_section, location_ground, numOfHills, width_Map, length_Map, sizeOfCube);
+	generateHillsToScene(&obj_coordinates, map_section, location_ground, numOfHills, width_Map, length_Map, sizeOfCube);
 
 	//Generate a certain number of houses in a scene
-	generateHousesToScene(obj_coordinates, map_section, location_ground, numOfHouses, width_Map, length_Map, sizeOfCube);
+	generateHousesToScene(&obj_coordinates, map_section, location_ground, numOfHouses, width_Map, length_Map, sizeOfCube);
 
 	//Generate a certain number of trees in a scene
-	generateTreesToScene(obj_coordinates, map_section, location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
+	generateTreesToScene(&obj_coordinates, map_section, location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
 
 	//Once all objects are pushed into the vector, start translating all the coordinates to obtain the cubes
 	//dir_translation is needed to create the cubes
 	//obj_coordinates are all the position of every point we pushed in from the generation of our objects
 	//buffer_data has all the positions
 	//indices is used for the EBO
-	translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
+	//translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
 
 }
 
@@ -1238,44 +1371,45 @@ void createMap(Camera scene_camera, glm::vec3 location_ground, vector<Cube>*** m
 void setupVertexObjects() {
 
 	//GENERATE THE ARRAY OBJECTS AND BUFFER OBJECTS
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);	
-	glGenBuffers(1, &EBO); //USED TO HOLD MY obj_indicesOfPoints
-
+	glGenVertexArrays(1, &obj_VAO);
+	glGenBuffers(1, &obj_VBO);
+	
 	//Binding the Vertex Array Object, then we bind and set the vertex buffers
-	glBindVertexArray(VAO);
+	glBindVertexArray(obj_VAO);
 
 	//COPYING OUR VERTICES ARRAY IN A VERTEX BUFFER FOR OPENGL TO USE
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, g_vertex_buffer_data.size() * sizeof(GLfloat), &g_vertex_buffer_data[0], GL_STATIC_DRAW);
-
-	//COPYING OUR INDEX ARRAY IN AN ELEMENT BUFFER FOR OPENGL TO USE
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj_indicesOfPoints.size() * sizeof(unsigned int), &obj_indicesOfPoints[0], GL_STATIC_DRAW);
-
-	//SETTING ATTRIBUTE POINTERS - LINKING VERTEX ATTRIBUTES
-	glVertexAttribPointer(
-		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-		3,                  // size
-		GL_FLOAT,           // type
-		GL_FALSE,           // normalized?
-		0,				// stride
-		(void*)0			// array buffer offset
-		);
-	glEnableVertexAttribArray(0); //ENABLING IT
+	glBindBuffer(GL_ARRAY_BUFFER, obj_VBO);
+	glBufferData(GL_ARRAY_BUFFER, obj_coordinates.size() * sizeof(GLfloat), &obj_coordinates[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
-
+	
+	//Character
 	glGenVertexArrays(1, &char_VAO);
 	glBindVertexArray(char_VAO);
 	glGenBuffers(1, &char_VBO);
-	glGenBuffers(1, &char_EBO);
 	glBindBuffer(GL_ARRAY_BUFFER, char_VBO);
-	glBufferData(GL_ARRAY_BUFFER, character_vertex_buffer_data.size() * sizeof(GLfloat), &character_vertex_buffer_data[0], GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, char_EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, character_indicesOfPoints.size() * sizeof(unsigned int), &character_indicesOfPoints[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0); 
+	glBufferData(GL_ARRAY_BUFFER, character_coordinates.size() * sizeof(GLfloat), &character_coordinates[0], GL_STATIC_DRAW);	
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);	
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0); // Unbind VAO to prevent bugs
+
+	//Cursor/Aim
+	glGenVertexArrays(1, &cursor_VAO);
+	glBindVertexArray(cursor_VAO);
+	glGenBuffers(1, &cursor_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, cursor_VBO);
+	glBufferData(GL_ARRAY_BUFFER, cursor_coordinates.size() * sizeof(GLfloat), &cursor_coordinates[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0); // Unbind VAO to prevent bugs
 
@@ -1287,7 +1421,7 @@ void setupVertexObjects() {
 	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
 	glBindVertexArray(0);
 }
 
@@ -1312,7 +1446,7 @@ createSceneCube(0.05, 0, 0.05, 0.5, "ground");
 translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
 */
 
-void updateBuffer(){
+void updateBufferCubeObjects(GLuint VAO, GLuint VBO){
 
 	//Binding the Vertex Array Object, then we bind and set the vertex buffers
 	glBindVertexArray(VAO);
@@ -1320,26 +1454,13 @@ void updateBuffer(){
 	//COPYING OUR VERTICES ARRAY IN A VERTEX BUFFER FOR OPENGL TO USE
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, NULL, NULL, GL_STATIC_DRAW);
-	glBufferData(GL_ARRAY_BUFFER, g_vertex_buffer_data.size() * sizeof(GLfloat), &g_vertex_buffer_data[0], GL_STATIC_DRAW);
-
-	//COPYING OUR INDEX ARRAY IN AN ELEMENT BUFFER FOR OPENGL TO USE
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, NULL, NULL, GL_STATIC_DRAW);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj_indicesOfPoints.size() * sizeof(unsigned int), &obj_indicesOfPoints[0], GL_STATIC_DRAW);
-
-	//SETTING ATTRIBUTE POINTERS - LINKING VERTEX ATTRIBUTES
-	glVertexAttribPointer(
-		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-		3,                  // size
-		GL_FLOAT,           // type
-		GL_FALSE,           // normalized?
-		0,				// stride
-		(void*)0			// array buffer offset
-		);
-	glEnableVertexAttribArray(0); //ENABLING IT
+	glBufferData(GL_ARRAY_BUFFER, obj_coordinates.size() * sizeof(GLfloat), &obj_coordinates[0], GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
-
 
 }
 
@@ -1353,13 +1474,14 @@ int main() {
 	int length_map = 100;
 	int width_map = 100;
 	int numOfTrees = 10;
-	int numOfHouses = 5;
+	int numOfHouses = 10;
 	int numOfHills = 1;
 	
 	
 	Camera scene_camera;
 	Character scene_character("Demo_WHSD");
-	Scene scene_map(scene_camera, scene_character, length_map, width_map, size_cube);	
+	Cursor scene_cursor(scene_camera.getCameraPosition() + glm::vec3(size_cube, size_cube, size_cube));
+	Scene scene_map(scene_camera, scene_character, scene_cursor, length_map, width_map, size_cube);	
 
 	//Setting the world environment
 	scene_map.setNumberOfHouses(numOfHouses);
@@ -1386,10 +1508,20 @@ int main() {
 	//Starting coordinates must be positive at the moment
 	createMap(scene_camera, glm::vec3(0.0f, -0.2f, 0.0f), map_section, width_map, length_map, numOfTrees, numOfHouses, numOfHills, size_cube);
 
-	delete character_coordinates;
-
 	scene_camera.setRadius(size_cube);
 	double radius = scene_camera.getRadius();
+
+	///Load the shaders
+	skyboxShader_program = loadShaders("../Source/skybox.vs", "../Source/skybox.fss");
+	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
+	//textureShader_program = loadShaders("../Source/cubeMap.vs", "../Source/cubeMap.fss");
+
+	//SETUP THE VERTEX AND ELEMENT OBJECTS FOR FIRST USE
+	setupVertexObjects();
+
+	GLuint containerTexture = loadTexture("../Source/images/container.jpg");
+	GLuint faceTexture = loadTexture("../Source/images/awesomeface.png");
+	#pragma endregion
 
 	//Creating the vector of faces which will hold the "images" of each face of the cube
 	vector<const GLchar*> faces;
@@ -1400,14 +1532,6 @@ int main() {
 	faces.push_back("../Source/images/back.jpg");
 	faces.push_back("../Source/images/front.jpg");
 	GLuint cubemapTexture = loadCubemap(faces); //load the texture
-
-	///Load the shaders
-	skyboxShader_program = loadShaders("../Source/skybox.vs", "../Source/skybox.fss");
-	shader_program = loadShaders("../Source/minecraft.vs", "../Source/minecraft.fss");
-	//textureShader_program = loadShaders("../Source/cubeMap.vs", "../Source/cubeMap.fss");
-
-	//SETUP THE VERTEX AND ELEMENT OBJECTS FOR FIRST USE
-	setupVertexObjects();
 
 	while (!glfwWindowShouldClose(window)) {
 
@@ -1443,7 +1567,6 @@ int main() {
 		// skybox cube
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);
-
 		glUniform1i(glGetUniformLocation(shader_program, "skybox"), 0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -1457,8 +1580,21 @@ int main() {
 		glUniformMatrix4fv(view_matrix_id, 1, GL_FALSE, glm::value_ptr(view_matrix));
 		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(model_matrix));
 
-		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, obj_indicesOfPoints.size(), GL_UNSIGNED_INT, (void*)0);
+		glBindVertexArray(obj_VAO);
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+		glBindTexture(GL_TEXTURE_2D, containerTexture);
+		glDrawArrays(GL_TRIANGLES, 0, obj_coordinates.size());
+		glBindVertexArray(0);
+
+		//OUR CURSOR MATRIX
+		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(cursor_model_matrix));
+
+		glBindVertexArray(cursor_VAO);
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+		glBindTexture(GL_TEXTURE_2D, containerTexture);
+		glDrawArrays(GL_LINES, 0, cursor_coordinates.size());
 		glBindVertexArray(0);
 
 		//OUR CHARACTER MATRIX
@@ -1466,7 +1602,10 @@ int main() {
 		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(character_model_matrix));
 
 		glBindVertexArray(char_VAO);
-		glDrawElements(GL_TRIANGLES, character_indicesOfPoints.size(), GL_UNSIGNED_INT, (void*)0);
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+		glBindTexture(GL_TEXTURE_2D, containerTexture);
+		glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
 		glBindVertexArray(0);
 
 		// put the stuff we've been drawing onto the display
@@ -1604,7 +1743,7 @@ bool checkCollision(glm::vec3 scene_camera_position, double radius, Cube cube) /
 	difference = closest - camera_center;
 
 	//requires a small bias >> account for the fact that floats are approximated
-	return (double)glm::length(difference) - 0.01 < radius;
+	return (double)glm::length(difference) - 0.02 < radius;
 }
 
 //Function to loop through all the scene objects to check if the camera has collided with an object
@@ -1629,13 +1768,10 @@ glm::vec3 getCenterViewCubePosition(glm::vec3 camera_position, float size_cube){
 	
 	float x = (int)(camera_position[0] * 10) / 10.0f;
 	float y = (int)(camera_position[1] * 10) / 10.0f;
-	float z = (int)(camera_position[2] * 10) / 10.0f;
+	float z = -1*((int)(-1 * camera_position[2] * 10)) / 10.0f;
 
 	return glm::vec3(x, y, z);
-
 }
-
-
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //CAMERA/PERSON MOVEMENT
@@ -1648,9 +1784,23 @@ void character_actions(Scene& scene_map, vector<Cube>*** map_section, double rad
 	GLfloat cameraSpeed = 2.0 * deltaTime;
 	//Temporary value to store the current camera position
 	glm::vec3 nextCameraPos = scene_map.getSceneCamera().getCameraPosition();
+
+	/*
 	glm::vec3 cameraFront = scene_map.getSceneCamera().getCameraFront();
 	Character scene_character = scene_map.getSceneCharacter();
+	glm::vec3 cursor_position = scene_map.getSceneCursor().getCenterPositionCursor();
 
+
+	//Refreshing the cursor	 
+	if (findMagnitude(previousCameraFront, cameraFront) > 0){
+		glm::vec3 translation_change = previousCameraFront / 10.0f - getCenterViewCubePosition(glm::vec3(cameraFront[0] / 10.0f, cameraFront[1] / 10.0f, cameraFront[2] / 10.0f), size_cube);
+		
+		scene_map.getSceneCursor().updateCenterPositionCursor(translation_change);
+		cursor_model_matrix = glm::translate(cursor_model_matrix, translation_change);
+
+		previousCameraFront = cameraFront;
+	}	
+	*/
 
 	if (leftclick){
 		//Where I want to place my object
@@ -1660,35 +1810,17 @@ void character_actions(Scene& scene_map, vector<Cube>*** map_section, double rad
 		//Get the center position of where the camera is looking at
 		nextCameraPos = getCenterViewCubePosition(nextCameraPos, size_cube);
 
-		cout << nextCameraPos[0] << " " << nextCameraPos[1] << " " << nextCameraPos[2] << endl;
-
 		//Check if the cube can be place:
 		//1- If there is no object at that location
-		if (nextCameraPos[1] > -0.1f || (*map_of_coordinates)[coordinatetoint(nextCameraPos[0], nextCameraPos[1], nextCameraPos[2])] != 0){
+		if (nextCameraPos[1] > -0.2f && (*map_of_coordinates)[coordinatetoint(nextCameraPos[0], nextCameraPos[1], nextCameraPos[2])] == 0){
 
-			cout << "Im in" << endl;
+			//Add the create cube function here
+			createSceneCube(&obj_coordinates, map_section, nextCameraPos[0], nextCameraPos[1], nextCameraPos[2], size_cube, 1);
 
-			glm::vec3 obj_position = getCenterViewCubePosition(nextCameraPos, size_cube);
-			obj_position[1] -= size_cube;
+			//Use manual create cube function here and set texture to each coordinate
 
-			//2- If there is something underneath
-			if ((*map_of_coordinates)[coordinatetoint(obj_position[0], obj_position[1], obj_position[2])] == 0){
-				cout << "im creating cube" << endl;
-
-				//Add the create cube function here
-				createSceneCube(obj_coordinates, map_section, nextCameraPos[0], nextCameraPos[1], nextCameraPos[2], size_cube, 1);
-
-				//clear the buffer
-				g_vertex_buffer_data.clear();
-
-				obj_indicesOfPoints.clear();
-
-				//Sweep all the points again
-				translationSweepMatrix(dir_translation, obj_coordinates, &g_vertex_buffer_data, &obj_indicesOfPoints);
-
-				//Refresh buffer after adding block
-				updateBuffer();
-			}
+			//Refresh buffer after adding block
+			updateBufferCubeObjects(obj_VAO, obj_VBO);
 		}	
 	}
 
@@ -2078,7 +2210,7 @@ void mouse_click(GLFWwindow* window, int key, int action, int mods){
 
 	switch (key){
 	case GLFW_MOUSE_BUTTON_LEFT:
-		if (action == GLFW_PRESS){
+		if (action == GLFW_PRESS && rightclick == false){
 			//Rotate hand on X-axis
 			character_model_matrix = glm::translate(character_model_matrix, glm::vec3(0, 0, -0.05f));			
 			character_model_matrix = glm::rotate(character_model_matrix, 0.25f, glm::vec3(-1, 0, 0));
@@ -2086,7 +2218,7 @@ void mouse_click(GLFWwindow* window, int key, int action, int mods){
 			//The boolean value will be used in character actions
 			leftclick = true;
 		}
-		else if (action == GLFW_RELEASE){
+		else if (action == GLFW_RELEASE && rightclick == false){
 			//Rotate hand on X-axis
 			character_model_matrix = glm::rotate(character_model_matrix, 0.25f, glm::vec3(1, 0, 0));
 			character_model_matrix = glm::translate(character_model_matrix, glm::vec3(0, 0, 0.05f));
@@ -2097,14 +2229,14 @@ void mouse_click(GLFWwindow* window, int key, int action, int mods){
 	
 	//To remove cubes
 	case GLFW_MOUSE_BUTTON_RIGHT:
-		if (action == GLFW_PRESS){
+		if (action == GLFW_PRESS && leftclick == false){
 			//Translate hand on X-axis
 			character_model_matrix = glm::translate(character_model_matrix, glm::vec3(0, 0, -0.1f));
 
 			//The boolean value will be used in character actions
 			rightclick = true;
 		}
-		else if (action == GLFW_RELEASE){
+		else if (action == GLFW_RELEASE && leftclick == false){
 			//Translate hand on X-axis
 			character_model_matrix = glm::translate(character_model_matrix, glm::vec3(0, 0, 0.1f));
 
