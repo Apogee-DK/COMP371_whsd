@@ -35,6 +35,8 @@ public:
 	//add a cube to a vector
 	void addCubeToInventory(Cube);
 
+	void removeCubeFromInventory(int);
+
 	//get the quantity of cube for each type from the vector
 	int getCubeQuantity(int);
 

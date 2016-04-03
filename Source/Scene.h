@@ -25,9 +25,9 @@ private:
 	float size_cube;
 
 	//Boundaries of the map
-	float min_x = -0.1f;
+	float min_x = 0.0f;
 	float min_y = -0.1f;
-	float max_z = 0.1f;
+	float max_z = 0.0f;
 	
 	float max_x;
 	float max_y;
@@ -71,8 +71,6 @@ public:
 	Camera& getSceneCamera();
 
 	Character& getSceneCharacter();
-
-	Cursor& getSceneCursor();
 
 	glm::vec3 Scene::getPreviousSceneCameraPosition();
 

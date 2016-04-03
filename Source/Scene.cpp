@@ -87,10 +87,6 @@ Character& Scene::getSceneCharacter(){
 	return scene_character;
 }
 
-Cursor& Scene::getSceneCursor(){
-	return scene_cursor;
-}
-
 glm::vec3 Scene::getPreviousSceneCameraPosition(){
 	return previous_camera_position;
 }

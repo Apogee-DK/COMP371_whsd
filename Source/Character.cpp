@@ -22,9 +22,14 @@ void Character::addCubeToInventory(Cube new_cube){
 	inventory_cube[typeofobject].push_back(new_cube);
 }
 
-int Character::getCubeQuantity(int index){
+void Character::removeCubeFromInventory(int type){
+	//remove the first cube in the vector
+	inventory_cube[type].erase(inventory_cube[type].begin());
+}
 
-	return inventory_cube[index].size();
+int Character::getCubeQuantity(int type){
+
+	return inventory_cube[type].size();
 }
 
 int Character::getHoldingTypeCube(){
