@@ -194,7 +194,7 @@ glm::mat4 character_view_matrix;
 glm::mat4 character_model_matrix;
 glm::mat4 cursor_model_matrix;
 
-GLuint tree_VBO, leaf_VBO, ground_VBO, water_VBO, hill_VBO, house_VBO, roof_VBO, char_VBO, cursor_VBO;
+GLuint tree_VBO, leaf_VBO, ground_VBO, water_VBO, hill_VBO, house_VBO, roof_VBO, bush_VBO, rock_VBO, gem_VBO, char_VBO, cursor_VBO;
 GLuint obj_VAO, char_VAO, cursor_VAO;
 
 GLuint skyboxVAO, skyboxVBO;
@@ -208,6 +208,9 @@ vector<GLfloat> leaf_coordinates;
 vector<GLfloat> hill_coordinates;
 vector<GLfloat> house_coordinates;
 vector<GLfloat> roof_coordinates;
+vector<GLfloat> bush_coordinates;
+vector<GLfloat> rock_coordinates;
+vector<GLfloat> gem_coordinates;
 
 //for the points on a square in order to draw the cube
 vector<GLfloat> character_coordinates;
@@ -252,6 +255,9 @@ bool rightclick = false;
 
 //Cursor
 bool cursor_hidden = false;
+
+//Hand
+int holding_cube_type = 1;
 
 //To smoothe out camera movement
 GLfloat deltaTime = 0.0f;	// Time between current frame and last frame
@@ -887,11 +893,11 @@ void createGround(vector<GLfloat>* ground_coordinates, vector<GLfloat>* water_co
 	if (_hasWater){
 		//Scene will contain water
 		//Dimensions
-		water_width = (rand() % width_ground) / 10;
-		water_length = (rand() % length_ground) / 10;
+		water_width = (rand() % (width_ground / 4) + width_ground / 4);
+		water_length = (rand() % (length_ground / 4) + length_ground / 4);
 		//Starting position
-		water_StartPosX = (rand() % (length_ground - water_length)) / 10;
-		water_StartPosZ = (rand() % (width_ground - water_width)) / 10;
+		water_StartPosX = (rand() % (length_ground - water_length));
+		water_StartPosZ = (rand() % (width_ground - water_width));
 	}
 
 	//Set a temp length 
@@ -915,22 +921,25 @@ void createGround(vector<GLfloat>* ground_coordinates, vector<GLfloat>* water_co
 		for (int j = 0; j < length_ground; j++){
 
 			//Check if we arrived at the x position for the body of water
-			if (water_StartPosX == i){
+			if (atZ && water_StartPosX == j){
 				atX = true;
 			}
 
 			//Add the water cube if we arrived at the starting location of our body of water and we have not reached the maximum amount of water cubes
 			if (atZ && atX && water_width > 0 && temp_w_length > 0){
-				createSceneCube(water_coordinates, map_section, location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, 1);
+				createSceneCube(water_coordinates, map_section, location_ground[0] + j*sizeOfCube, location_ground[1], location_ground[2] - i*sizeOfCube, sizeOfCube, 1);
 				temp_w_length--; //decrease the length
 			}
 
 			//Generate a ground cube if it is not a water cube
 			else{
-				createSceneCube(ground_coordinates, map_section, location_ground[0] + i*sizeOfCube, location_ground[1], location_ground[2] - j*sizeOfCube, sizeOfCube, 2); //1 for ground
+				createSceneCube(ground_coordinates, map_section, location_ground[0] + j*sizeOfCube, location_ground[1], location_ground[2] - i*sizeOfCube, sizeOfCube, 2); 
 			}
 		}
-		water_width--; //decrease the width of the body of water
+		if (atZ && atX){
+			water_width--; //decrease the width of the body of water
+			atX = false;
+		}
 	}
 }
 
@@ -957,10 +966,6 @@ void createHill(vector<GLfloat>* hill_coordinates, vector<Cube>*** map_section, 
 
 		coordinate[0] += sizeOfCube;
 		coordinate[2] -= sizeOfCube;
-
-		//I could random this
-		width_hill -= 3;
-		length_hill -= 3;
 	}
 }
 
@@ -1115,6 +1120,33 @@ void createHouse(vector<GLfloat>* house_coordinates, vector<GLfloat>* roof_coord
 	createRoof(roof_coordinates, map_section, coordinate, height_house, width_house, length_house, sizeOfCube);
 }
 
+void createBush(vector<GLfloat>* bushes_coordinates, vector<Cube>*** map_section, glm::vec3 location_bush, int width_bush, int length_bush, float sizeOfCube){
+
+	for (int i = 0; i < width_bush; i++){
+		for (int j = 0; j < length_bush; j++){
+			createSceneCube(bushes_coordinates, map_section, location_bush[0] + j*sizeOfCube, location_bush[1], location_bush[2] + i*sizeOfCube, sizeOfCube, 8);
+		}
+	}
+}
+
+void createRocks(vector<GLfloat>* rocks_coordinates, vector<Cube>*** map_section, glm::vec3 location_rocks, int width_rocks, int length_rocks, float sizeOfCube){
+
+	for (int i = 0; i < width_rocks; i++){
+		for (int j = 0; j < length_rocks; j++){
+			createSceneCube(rocks_coordinates, map_section, location_rocks[0] + j*sizeOfCube, location_rocks[1], location_rocks[2] + i*sizeOfCube, sizeOfCube, 9);
+		}
+	}
+}
+
+void createGems(vector<GLfloat>* gems_coordinates, vector<Cube>*** map_section, glm::vec3 location_gems, int width_gems, int length_gems, float sizeOfCube){
+
+	for (int i = 0; i < width_gems; i++){
+		for (int j = 0; j < length_gems; j++){
+			createSceneCube(gems_coordinates, map_section, location_gems[0] + j*sizeOfCube, location_gems[1], location_gems[2] + i*sizeOfCube, sizeOfCube, 10);
+		}
+	}
+}
+
 //--------------------------------------------------------------------------------------------------------------------------------------------
 //CREATE CHARACTER
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -1122,7 +1154,7 @@ void createCharacter(vector<GLfloat>* character_coordinates, vector<Cube>*** map
 
 	glm::vec3 coordinate = scene_camera.getCameraPosition(); //Starting location of our sprite
 	float size = sizeOfCube / 2;
-	int type = 9;
+	int type = 11;
 
 	//map_of_coordinates[to_string((*character_coordinates)[0]) + to_string((*character_coordinates)[1]) + to_string((*character_coordinates)[2])] = type;
 
@@ -1140,7 +1172,7 @@ void createCursor(vector<GLfloat>* cursor_coordinates, vector<Cube>*** map_secti
 
 	glm::vec3 camera_position = scene_camera.getCameraPosition(); //Starting location of our sprite
 
-	int type = 8;
+	int type = 12;
 
 	//map_of_coordinates[to_string((*character_coordinates)[0]) + to_string((*character_coordinates)[1]) + to_string((*character_coordinates)[2])] = type;
 
@@ -1316,6 +1348,91 @@ void generateHousesToScene(vector<GLfloat>* house_coordinates, vector<GLfloat>* 
 
 }
 
+void generateBushesToScene(vector<GLfloat>* bushes_coordinates, vector<Cube>*** map_section, glm::vec3 location_ground, int numOfBushes, int width_Map, int length_Map, float sizeOfCube){
+
+	for (int i = 0; i < numOfBushes; i++){
+		int width_bush = rand() % 2 + 1;
+		int length_bush = rand() % 2 + 1;
+		float pos_x = ((int)(rand() % (length_Map - length_bush - 2) + 1)) / 10.0f;
+		float pos_z = ((int)(rand() % (width_Map - width_bush - 2) + 1)) / 10.0f;
+
+		while (pos_x + location_ground[0] + length_bush*sizeOfCube > length_Map*sizeOfCube || pos_z + location_ground[2] + width_bush*sizeOfCube > width_Map*sizeOfCube){
+			pos_x = ((int)(rand() % (length_Map - length_bush - 2) + 1)) / 10.0f;
+			pos_z = ((int)(rand() % (width_Map - width_bush - 2) + 1)) / 10.0f;
+		}
+
+		int count = 0;
+
+		while (count < 10 && checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), 1, width_bush, length_bush, sizeOfCube)){
+			//The section in which the house is being placed is not free
+			//Random the x and z coordinate again			
+			pos_x = ((int)(rand() % (length_Map - length_bush - 2) + 1)) / 10.0f;
+			pos_z = ((int)(rand() % (width_Map - width_bush - 2) + 1)) / 10.0f; 
+
+			count++;
+		}
+
+		createBush(bushes_coordinates, map_section, glm::vec3(location_ground[0] + pos_x, location_ground[1] + sizeOfCube, location_ground[2] - pos_z), width_bush, length_bush, sizeOfCube);
+	}
+}
+
+void generateRocksToScene(vector<GLfloat>* rocks_coordinates, vector<Cube>*** map_section, glm::vec3 location_ground, int numOfRocks, int width_Map, int length_Map, float sizeOfCube){
+
+	for (int i = 0; i < numOfRocks; i++){
+		int width_rock = rand() % 2 + 1;
+		int length_rock = rand() % 2 + 1;
+		float pos_x = ((int)(rand() % (length_Map - length_rock - 2) + 1)) / 10.0f;
+		float pos_z = ((int)(rand() % (width_Map - width_rock - 2) + 1)) / 10.0f;
+
+		while (pos_x + location_ground[0] + length_rock*sizeOfCube > length_Map*sizeOfCube || pos_z + location_ground[2] + width_rock*sizeOfCube > width_Map*sizeOfCube){
+			pos_x = ((int)(rand() % (length_Map - length_rock - 2) + 1)) / 10.0f;
+			pos_z = ((int)(rand() % (width_Map - width_rock - 2) + 1)) / 10.0f;
+		}
+
+		int count = 0;
+
+		while (count < 10 && checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), 1, width_rock, length_rock, sizeOfCube)){
+			//The section in which the house is being placed is not free
+			//Random the x and z coordinate again			
+			pos_x = ((int)(rand() % (length_Map - length_rock - 2) + 1)) / 10.0f;
+			pos_z = ((int)(rand() % (width_Map - width_rock - 2) + 1)) / 10.0f;
+
+			count++;
+		}
+
+		createRocks(rocks_coordinates, map_section, glm::vec3(location_ground[0] + pos_x, location_ground[1] + sizeOfCube, location_ground[2] - pos_z), width_rock, length_rock, sizeOfCube);
+	}
+}
+
+void generateGemsToScene(vector<GLfloat>* gems_coordinates, vector<Cube>*** map_section, glm::vec3 location_ground, int numOfGems, int width_Map, int length_Map, float sizeOfCube){
+
+	for (int i = 0; i < numOfGems; i++){
+		int width_gem = rand() % 2 + 1;
+		int length_gem = rand() % 2 + 1;
+		float pos_x = ((int)(rand() % (length_Map - length_gem - 2) + 1)) / 10.0f;
+		float pos_z = ((int)(rand() % (width_Map - width_gem - 2) + 1)) / 10.0f;
+
+		while (pos_x + location_ground[0] + length_gem*sizeOfCube > length_Map*sizeOfCube || pos_z + location_ground[2] + width_gem*sizeOfCube > width_Map*sizeOfCube){
+			pos_x = ((int)(rand() % (length_Map - length_gem - 2) + 1)) / 10.0f;
+			pos_z = ((int)(rand() % (width_Map - width_gem - 2) + 1)) / 10.0f;
+		}
+
+		int count = 0;
+
+		while (count < 10 && checkEmptySpaces(glm::vec3(location_ground[0] + pos_x - sizeOfCube, location_ground[1] + sizeOfCube, location_ground[2] - pos_z + sizeOfCube), 1, width_gem, length_gem, sizeOfCube)){
+			//The section in which the house is being placed is not free
+			//Random the x and z coordinate again			
+			pos_x = ((int)(rand() % (length_Map - length_gem - 2) + 1)) / 10.0f;
+			pos_z = ((int)(rand() % (width_Map - width_gem - 2) + 1)) / 10.0f;
+
+			count++;
+		}
+
+		createGems(gems_coordinates, map_section, glm::vec3(location_ground[0] + pos_x, location_ground[1] + sizeOfCube, location_ground[2] - pos_z), width_gem, length_gem, sizeOfCube);
+	}
+}
+
+
 /**
 Function to generate the map procedurally
 The generation of objects in a scene requires:
@@ -1326,13 +1443,11 @@ The generation of objects in a scene requires:
 - numOfHouses: number of houses in the scene, value provided by user
 - sizeOfCube: fixed dimension of a single cube, value provided by user
 */
-void createMap(Camera scene_camera, glm::vec3 location_ground, vector<Cube>*** map_section, int width_Map, int length_Map, int numOfTrees, int numOfHouses, int numOfHills, float sizeOfCube){
+void createMap(Camera scene_camera, glm::vec3 location_ground, vector<Cube>*** map_section, int width_Map, int length_Map, int numOfTrees, int numOfHouses, int numOfHills, int numOfBushes, int numOfRocks, int numOfGems, float sizeOfCube){
 
 	//The position of the water section will be randomized depending on how large the surface is
 	//The coordinates, width_obj and length_obj will be random
-
-	bool _hasWater = rand() % 2; //it works, change the size of the water
-	createGround(&ground_coordinates, &water_coordinates, map_section, location_ground, width_Map, length_Map, sizeOfCube, _hasWater);
+	createGround(&ground_coordinates, &water_coordinates, map_section, location_ground, width_Map, length_Map, sizeOfCube, true);
 
 	//Create the character and set the camera to its position
 	createCharacter(&character_coordinates, map_section, scene_camera, sizeOfCube);
@@ -1348,6 +1463,13 @@ void createMap(Camera scene_camera, glm::vec3 location_ground, vector<Cube>*** m
 
 	//Generate a certain number of trees in a scene
 	generateTreesToScene(&tree_coordinates, &leaf_coordinates, map_section, location_ground, numOfTrees, width_Map, length_Map, sizeOfCube);
+
+	generateBushesToScene(&bush_coordinates, map_section, location_ground, numOfBushes, width_Map, length_Map, sizeOfCube);
+
+	generateRocksToScene(&rock_coordinates, map_section, location_ground, numOfRocks, width_Map, length_Map, sizeOfCube);
+
+	generateGemsToScene(&gem_coordinates, map_section, location_ground, numOfGems, width_Map, length_Map, sizeOfCube);
+
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
@@ -1365,6 +1487,9 @@ void setupVertexObjects() {
 	glGenBuffers(1, &leaf_VBO);
 	glGenBuffers(1, &house_VBO);
 	glGenBuffers(1, &roof_VBO);
+	glGenBuffers(1, &bush_VBO);
+	glGenBuffers(1, &rock_VBO);
+	glGenBuffers(1, &gem_VBO);
 
 	glBindVertexArray(obj_VAO);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
@@ -1420,6 +1545,27 @@ void setupVertexObjects() {
 		//roof
 		glBindBuffer(GL_ARRAY_BUFFER, roof_VBO);
 		glBufferData(GL_ARRAY_BUFFER, roof_coordinates.size() * sizeof(GLfloat), &roof_coordinates[0], GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	if (bush_coordinates.size() > 0){
+		//roof
+		glBindBuffer(GL_ARRAY_BUFFER, bush_VBO);
+		glBufferData(GL_ARRAY_BUFFER, bush_coordinates.size() * sizeof(GLfloat), &bush_coordinates[0], GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	if (rock_coordinates.size() > 0){
+		//roof
+		glBindBuffer(GL_ARRAY_BUFFER, rock_VBO);
+		glBufferData(GL_ARRAY_BUFFER, rock_coordinates.size() * sizeof(GLfloat), &rock_coordinates[0], GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	if (gem_coordinates.size() > 0){
+		//roof
+		glBindBuffer(GL_ARRAY_BUFFER, gem_VBO);
+		glBufferData(GL_ARRAY_BUFFER, gem_coordinates.size() * sizeof(GLfloat), &gem_coordinates[0], GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
@@ -1510,11 +1656,14 @@ int main() {
 
 	//Setting up the map dimensions
 	float size_cube = 0.1f;
-	int length_map = 100;
-	int width_map = 100;
-	int numOfTrees = 10;
-	int numOfHouses = 5;
+	int length_map = 200;
+	int width_map = 200;
+	int numOfTrees = 100;
+	int numOfHouses = 10;
 	int numOfHills = 1;
+	int numOfBushes = 100;
+	int numOfRocks = 100;
+	int numOfGems = 100;
 
 
 	Camera scene_camera;
@@ -1545,7 +1694,7 @@ int main() {
 	//Set the Y-axis to -0.3f --> Ground at -0.3f, at the moment, it is the best Y position for our camera (around eye level for our sprite)
 	//View matrix is set up here
 	//Starting coordinates must be positive at the moment
-	createMap(scene_camera, glm::vec3(0.0f, -0.2f, 0.0f), map_section, width_map, length_map, numOfTrees, numOfHouses, numOfHills, size_cube);
+	createMap(scene_camera, glm::vec3(0.0f, -0.2f, 0.0f), map_section, width_map, length_map, numOfTrees, numOfHouses, numOfHills, numOfBushes, numOfRocks, numOfGems, size_cube);
 
 	scene_camera.setRadius(size_cube);
 	double radius = scene_camera.getRadius();
@@ -1566,7 +1715,10 @@ int main() {
 	GLuint roofTexture = loadTexture("../Source/images/roof1.jpg");	 //5
 	GLuint treeTexture = loadTexture("../Source/images/tree.jpg"); //6
 	GLuint leafTexture = loadTexture("../Source/images/leaf1.jpg"); //7
-#pragma endregion
+	GLuint bushTexture = loadTexture("../Source/images/bush.jpg"); //8
+	GLuint rockTexture = loadTexture("../Source/images/rock.jpg"); //9
+	GLuint gemTexture = loadTexture("../Source/images/gem.jpg"); //0
+	#pragma endregion
 
 	//Creating the vector of faces which will hold the "images" of each face of the cube
 	vector<const GLchar*> faces;
@@ -1704,6 +1856,39 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, leaf_coordinates.size());
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+		glBindBuffer(GL_ARRAY_BUFFER, bush_VBO);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+		glEnableVertexAttribArray(1);
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+		glBindTexture(GL_TEXTURE_2D, bushTexture);
+		glDrawArrays(GL_TRIANGLES, 0, bush_coordinates.size());
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, gem_VBO);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+		glEnableVertexAttribArray(1);
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+		glBindTexture(GL_TEXTURE_2D, gemTexture);
+		glDrawArrays(GL_TRIANGLES, 0, gem_coordinates.size());
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, rock_VBO);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)0);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+		glEnableVertexAttribArray(1);
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+		glBindTexture(GL_TEXTURE_2D, rockTexture);
+		glDrawArrays(GL_TRIANGLES, 0, rock_coordinates.size());
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 		glBindVertexArray(0);
 
 		//OUR CHARACTER MATRIX
@@ -1714,12 +1899,81 @@ int main() {
 
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		glActiveTexture(GL_TEXTURE0);
-		glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
-		glBindTexture(GL_TEXTURE_2D, containerTexture);
-		glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
-		glBindVertexArray(0);
 
+		//Update the holding type
+
+		switch (holding_cube_type){
+
+		case 1:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, waterTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 2:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, groundTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 3:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, hillTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 4:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, houseTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 5:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, roofTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 6:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, treeTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+		case 7:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, leafTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 8:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, bushTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 9:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, rockTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		case 10:
+			glActiveTexture(GL_TEXTURE0);
+			glUniform1i(glGetUniformLocation(shader_program, "texture_diffuse1"), 0);
+			glBindTexture(GL_TEXTURE_2D, gemTexture);
+			glDrawArrays(GL_TRIANGLES, 0, character_coordinates.size());
+			glBindVertexArray(0);
+			break;
+		}
 
 		//Cursor
 		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(cursor_model_matrix));
@@ -1916,6 +2170,33 @@ void character_actions(Scene& scene_map, vector<Cube>*** map_section, double rad
 					scene_character.removeCubeFromInventory(7);
 				}
 				break;
+			case 8:
+				if (scene_character.getCubeQuantity(8) > 0){
+					//Add the create cube function here
+					createSceneCube(&bush_coordinates, map_section, nextCameraPos[0], nextCameraPos[1], nextCameraPos[2], size_cube, 8);
+					//Refresh buffer after adding block
+					updateBufferCubeObjects(obj_VAO, bush_VBO, bush_coordinates);
+					scene_character.removeCubeFromInventory(8);
+				}
+				break;
+			case 9:
+				if (scene_character.getCubeQuantity(9) > 0){
+					//Add the create cube function here
+					createSceneCube(&rock_coordinates, map_section, nextCameraPos[0], nextCameraPos[1], nextCameraPos[2], size_cube, 9);
+					//Refresh buffer after adding block
+					updateBufferCubeObjects(obj_VAO, rock_VBO, rock_coordinates);
+					scene_character.removeCubeFromInventory(9);
+				}
+				break;
+			case 10:
+				if (scene_character.getCubeQuantity(10) > 0){
+					//Add the create cube function here
+					createSceneCube(&gem_coordinates, map_section, nextCameraPos[0], nextCameraPos[1], nextCameraPos[2], size_cube, 10);
+					//Refresh buffer after adding block
+					updateBufferCubeObjects(obj_VAO, gem_VBO, gem_coordinates);
+					scene_character.removeCubeFromInventory(10);
+				}
+				break;
 			}
 		}
 	}
@@ -1950,6 +2231,9 @@ void character_actions(Scene& scene_map, vector<Cube>*** map_section, double rad
 
 			switch (typeOfCube){
 			case 1:
+				if (center_cube[1] == -0.2f){
+					break;
+				}
 				//Find the object in the buffer which contains the same coordinates as the center position we have determined at the top
 				for (int i = 0; i < water_coordinates.size(); i += 180){
 					if (water_coordinates[i] == first_vertex_cube[0] && water_coordinates[i + 1] == first_vertex_cube[1] && water_coordinates[i + 2] == first_vertex_cube[2]){
@@ -1971,7 +2255,7 @@ void character_actions(Scene& scene_map, vector<Cube>*** map_section, double rad
 
 			case 2:
 				//Make sure I don't delete the ground underneath
-				if (nextCameraPos[1] < -0.1f){
+				if (center_cube[1] == -0.2f){
 					break;
 				}
 
@@ -2093,11 +2377,69 @@ void character_actions(Scene& scene_map, vector<Cube>*** map_section, double rad
 				//Add the cube to your inventory
 				scene_character.addCubeToInventory(Cube(glm::vec3(0, 0, 0), size_cube, 7));
 				break;
-			}
 
+			case 8:
+				//Find the object in the buffer which contains the same coordinates as the center position we have determined at the top
+				for (int i = 0; i < bush_coordinates.size(); i += 180){
+					if (bush_coordinates[i] == first_vertex_cube[0] && bush_coordinates[i + 1] == first_vertex_cube[1] && bush_coordinates[i + 2] == first_vertex_cube[2]){
+						bush_coordinates.erase(bush_coordinates.begin() + i, bush_coordinates.begin() + i + 180);
+						break;
+					}
+				}
+
+				//Find the object in the map section and remove it
+				map_section[coord_x][coord_z]->erase(map_section[coord_x][coord_z]->begin() + index);
+
+				//Set that map coordinate as 0, so we can add a block there
+				map_of_coordinates[coordinatetoint(center_cube[0], center_cube[1], center_cube[2])] = 0;
+				updateBufferCubeObjects(obj_VAO, bush_VBO, bush_coordinates);
+
+				//Add the cube to your inventory
+				scene_character.addCubeToInventory(Cube(glm::vec3(0, 0, 0), size_cube, 8));
+				break;
+
+			case 9:
+				//Find the object in the buffer which contains the same coordinates as the center position we have determined at the top
+				for (int i = 0; i < rock_coordinates.size(); i += 180){
+					if (rock_coordinates[i] == first_vertex_cube[0] && rock_coordinates[i + 1] == first_vertex_cube[1] && rock_coordinates[i + 2] == first_vertex_cube[2]){
+						rock_coordinates.erase(rock_coordinates.begin() + i, rock_coordinates.begin() + i + 180);
+						break;
+					}
+				}
+
+				//Find the object in the map section and remove it
+				map_section[coord_x][coord_z]->erase(map_section[coord_x][coord_z]->begin() + index);
+
+				//Set that map coordinate as 0, so we can add a block there
+				map_of_coordinates[coordinatetoint(center_cube[0], center_cube[1], center_cube[2])] = 0;
+				updateBufferCubeObjects(obj_VAO, rock_VBO, rock_coordinates);
+
+				//Add the cube to your inventory
+				scene_character.addCubeToInventory(Cube(glm::vec3(0, 0, 0), size_cube, 9));
+				break;
+
+			case 10:
+				//Find the object in the buffer which contains the same coordinates as the center position we have determined at the top
+				for (int i = 0; i < gem_coordinates.size(); i += 180){
+					if (gem_coordinates[i] == first_vertex_cube[0] && gem_coordinates[i + 1] == first_vertex_cube[1] && gem_coordinates[i + 2] == first_vertex_cube[2]){
+						gem_coordinates.erase(gem_coordinates.begin() + i, gem_coordinates.begin() + i + 180);
+						break;
+					}
+				}
+
+				//Find the object in the map section and remove it
+				map_section[coord_x][coord_z]->erase(map_section[coord_x][coord_z]->begin() + index);
+
+				//Set that map coordinate as 0, so we can add a block there
+				map_of_coordinates[coordinatetoint(center_cube[0], center_cube[1], center_cube[2])] = 0;
+				updateBufferCubeObjects(obj_VAO, gem_VBO, gem_coordinates);
+
+				//Add the cube to your inventory
+				scene_character.addCubeToInventory(Cube(glm::vec3(0, 0, 0), size_cube, 10));
+				break;
+			}
 		}
 	}
-
 
 	else if (keys[GLFW_KEY_SPACE]){
 		if (!freeRoam && !jumped){
@@ -2368,37 +2710,62 @@ void character_actions(Scene& scene_map, vector<Cube>*** map_section, double rad
 	else if (keys[GLFW_KEY_1]){
 		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 1){
 			scene_map.getSceneCharacter().setHoldingTypeCube(1);
+			holding_cube_type = 1;
 		}
 	}
 
 	else if (keys[GLFW_KEY_2]){
 		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 2){
 			scene_map.getSceneCharacter().setHoldingTypeCube(2);
+			holding_cube_type = 2;
 		}
 	}
 	else if (keys[GLFW_KEY_3]){
 		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 3){
 			scene_map.getSceneCharacter().setHoldingTypeCube(3);
+			holding_cube_type = 3;
 		}
 	}
 	else if (keys[GLFW_KEY_4]){
 		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 4){
 			scene_map.getSceneCharacter().setHoldingTypeCube(4);
+			holding_cube_type = 4;
 		}
 	}
 	else if (keys[GLFW_KEY_5]){
 		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 5){
 			scene_map.getSceneCharacter().setHoldingTypeCube(5);
+			holding_cube_type = 5;
 		}
 	}
 	else if (keys[GLFW_KEY_6]){
 		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 6){
 			scene_map.getSceneCharacter().setHoldingTypeCube(6);
+			holding_cube_type = 6;
 		}
 	}
 	else if (keys[GLFW_KEY_7]){
 		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 7){
 			scene_map.getSceneCharacter().setHoldingTypeCube(7);
+			holding_cube_type = 7;
+		}
+	}
+	else if (keys[GLFW_KEY_8]){
+		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 8){
+			scene_map.getSceneCharacter().setHoldingTypeCube(8);
+			holding_cube_type = 8;
+		}
+	}
+	else if (keys[GLFW_KEY_9]){
+		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 9){
+			scene_map.getSceneCharacter().setHoldingTypeCube(9);
+			holding_cube_type = 9;
+		}
+	}
+	else if (keys[GLFW_KEY_0]){
+		if (scene_map.getSceneCharacter().getHoldingTypeCube() != 10){
+			scene_map.getSceneCharacter().setHoldingTypeCube(10);
+			holding_cube_type = 10;
 		}
 	}
 
