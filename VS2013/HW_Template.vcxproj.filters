@@ -27,12 +27,6 @@
     <None Include="..\Source\minecraft.vs">
       <Filter>Resource Files\Shaders</Filter>
     </None>
-    <None Include="..\Source\cubeMap.fss">
-      <Filter>Resource Files\Shaders</Filter>
-    </None>
-    <None Include="..\Source\cubeMap.vs">
-      <Filter>Resource Files\Shaders</Filter>
-    </None>
     <None Include="..\Source\skybox.fss">
       <Filter>Resource Files\Shaders</Filter>
     </None>
@@ -48,6 +42,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Source\Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Scene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Character.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Cursor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -70,12 +73,51 @@
     <Image Include="..\Source\images\bottom.jpg">
       <Filter>Resource Files\images</Filter>
     </Image>
+    <Image Include="..\Source\images\container.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\awesomeface.png">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\leaf1.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\leaf2.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\roof1.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\tree.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\water.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\grass.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\gravel.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
+    <Image Include="..\Source\images\house1.jpg">
+      <Filter>Resource Files\images</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Cube.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Source\Camera.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Scene.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Character.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Cursor.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,19 +6,18 @@
 #include "Camera.h"
 #include "Character.h"
 #include "Cursor.h"
-using namespace std;
 
 class Scene{
 private:
 	//Setting up the map dimensions
-	
+
 	Camera scene_camera;
 	Character scene_character;
 	Cursor scene_cursor;
 	glm::vec3 previous_camera_position;
 
 	int length_map;
-	int width_map;		
+	int width_map;
 	int numOfTrees;
 	int numOfHouses;
 	int numOfHills;
@@ -28,7 +27,7 @@ private:
 	float min_x = 0.0f;
 	float min_y = -0.1f;
 	float max_z = 0.0f;
-	
+
 	float max_x;
 	float max_y;
 	float min_z;
@@ -59,7 +58,7 @@ public:
 	void setSceneCamera(Camera);
 
 	void setPreviousCameraPosition(glm::vec3);
-	
+
 	glm::vec3 getMinBoundaryMap();
 
 	glm::vec3 getMaxBoundaryMap();
@@ -73,7 +72,5 @@ public:
 	Character& getSceneCharacter();
 
 	glm::vec3 Scene::getPreviousSceneCameraPosition();
-
-
 };
 #endif

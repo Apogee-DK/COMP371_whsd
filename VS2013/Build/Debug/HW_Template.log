@@ -1,31 +1,50 @@
-﻿Build started 28/03/2016 11:53:35 AM.
+﻿Build started 04/04/2016 2:46:16 PM.
      1>Project "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\HW_Template.vcxproj" on node 2 (Build target(s)).
      1>G:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120\Microsoft.CppBuild.targets(364,5): warning MSB8004: Output Directory does not end with a trailing slash.  This build instance will add the slash as it is required to allow proper evaluation of the Output Directory.
      1>ClCompile:
          G:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /I../ThirdParty/SOIL /I../ThirdParty/glew /I../ThirdParty/glm /I../ThirdParty/glfw /I../ThirdParty/cimg /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/" /Fd"C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ..\Source\main.cpp
          main.cpp
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(46): warning C4018: '<' : signed/unsigned mismatch
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(202): warning C4244: 'return' : conversion from 'double' to 'float', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(423): warning C4018: '<' : signed/unsigned mismatch
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(424): warning C4018: '<' : signed/unsigned mismatch
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(504): warning C4018: '<' : signed/unsigned mismatch
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1085): warning C4244: 'argument' : conversion from 'time_t' to 'unsigned int', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1088): warning C4305: 'initializing' : truncation from 'double' to 'float'
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1130): warning C4244: 'initializing' : conversion from 'double' to 'GLfloat', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1443): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1444): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1448): warning C4244: 'initializing' : conversion from 'double' to 'GLfloat', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1449): warning C4244: 'initializing' : conversion from 'double' to 'GLfloat', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1450): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
-     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1451): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(121): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(122): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(123): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(294): warning C4244: 'return' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(559): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(560): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1846): warning C4244: 'argument' : conversion from 'time_t' to 'unsigned int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(1933): warning C4244: 'initializing' : conversion from 'double' to 'GLfloat', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2303): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2304): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2307): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2334): warning C4244: 'initializing' : conversion from 'double' to 'GLfloat', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2462): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2463): warning C4244: 'initializing' : conversion from 'float' to 'int', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2487): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2512): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2532): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2552): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2571): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2590): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2610): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2630): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2650): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2670): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(2690): warning C4018: '<' : signed/unsigned mismatch
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(3078): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(3079): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(3083): warning C4244: 'initializing' : conversion from 'double' to 'GLfloat', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(3084): warning C4244: 'initializing' : conversion from 'double' to 'GLfloat', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(3085): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+     1>c:\users\dexter kwok\desktop\minecraft project comp371\source\main.cpp(3086): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
        Link:
          G:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Bin/.\HW_Template-Debug.exe" /INCREMENTAL /NOLOGO /LIBPATH:../ThirdParty/glew /LIBPATH:../ThirdParty/glfw/ /LIBPATH:../ThirdParty/SOIL/ SOIL.lib opengl32.lib glew32s.lib glew32.lib glfw3.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Bin/.\HW_Template-Debug.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Bin/.\HW_Template-Debug.lib" /MACHINE:X86 "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/Camera.obj"
+         "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/Character.obj"
          "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/Cube.obj"
+         "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/Cursor.obj"
          "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/main.obj"
-     1>LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+         "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Build/Debug/Scene.obj"
          HW_Template.vcxproj -> C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\/../Bin/.\HW_Template-Debug.exe
      1>Done Building Project "C:\Users\Dexter Kwok\Desktop\Minecraft Project COMP371\VS2013\HW_Template.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:01.11
+Time Elapsed 00:00:01.05

@@ -17,7 +17,7 @@ private:
 	int currentTypeCube; //the type of cube the character is holding
 	int currentTypeTool; //If we decide to add tool/weapons
 
-	vector<Cube> inventory_cube[10]; //assuming there's only 10 types of cubes at the moment
+	vector<Cube> inventory_cube[20]; //assuming there's only 10 types of cubes at the moment
 
 
 public:

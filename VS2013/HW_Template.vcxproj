@@ -72,28 +72,42 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Source\Camera.cpp" />
+    <ClCompile Include="..\Source\Character.cpp" />
     <ClCompile Include="..\Source\Cube.cpp" />
+    <ClCompile Include="..\Source\Cursor.cpp" />
     <ClCompile Include="..\Source\main.cpp" />
+    <ClCompile Include="..\Source\Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Source\cubeMap.fss" />
-    <None Include="..\Source\cubeMap.vs" />
     <None Include="..\Source\minecraft.fss" />
     <None Include="..\Source\minecraft.vs" />
     <None Include="..\Source\skybox.fss" />
     <None Include="..\Source\skybox.vs" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\Source\images\awesomeface.png" />
     <Image Include="..\Source\images\back.jpg" />
     <Image Include="..\Source\images\bottom.jpg" />
+    <Image Include="..\Source\images\container.jpg" />
     <Image Include="..\Source\images\front.jpg" />
+    <Image Include="..\Source\images\grass.jpg" />
+    <Image Include="..\Source\images\gravel.jpg" />
+    <Image Include="..\Source\images\house1.jpg" />
+    <Image Include="..\Source\images\leaf1.jpg" />
+    <Image Include="..\Source\images\leaf2.jpg" />
     <Image Include="..\Source\images\left.jpg" />
     <Image Include="..\Source\images\right.jpg" />
+    <Image Include="..\Source\images\roof1.jpg" />
     <Image Include="..\Source\images\top.jpg" />
+    <Image Include="..\Source\images\tree.jpg" />
+    <Image Include="..\Source\images\water.jpg" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Source\Camera.h" />
+    <ClInclude Include="..\Source\Character.h" />
     <ClInclude Include="..\Source\Cube.h" />
+    <ClInclude Include="..\Source\Cursor.h" />
+    <ClInclude Include="..\Source\Scene.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
